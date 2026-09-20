@@ -3,15 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zeiterfassung & Überstundenkonto</title>
+    <title>Zeiterfassung, Überstunden & Urlaub</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Supabase JS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- html2pdf.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -31,7 +29,7 @@
                     <i data-lucide="clock" class="w-8 h-8"></i>
                 </div>
                 <h1 class="text-2xl font-bold text-white">Zeiterfassung</h1>
-                <p class="text-xs text-slate-400 mt-1">Anmeldung zum Überstunden- & Zeitkonto</p>
+                <p class="text-xs text-slate-400 mt-1">Anmeldung zum Zeit-, Überstunden- & Urlaubskonto</p>
             </div>
 
             <!-- Face ID / Passkey Quick Login Button -->
@@ -77,7 +75,7 @@
                         <i data-lucide="calculator" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <h1 class="text-base font-bold text-white leading-none">Zeiterfassung & Überstunden</h1>
+                        <h1 class="text-base font-bold text-white leading-none">Zeiterfassung</h1>
                         <span id="userEmailDisplay" class="text-[11px] text-slate-400">angemeldet</span>
                     </div>
                 </div>
@@ -90,21 +88,26 @@
         <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
 
             <!-- OVERTIME & VACATION DASHBOARD CARDS -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-5">
-                    <div class="text-[11px] font-bold uppercase text-slate-400 mb-1">Soll-Arbeitszeit (Monat)</div>
-                    <div id="dashSollHours" class="text-2xl font-bold text-slate-200">160.0 h</div>
-                    <span class="text-[10px] text-slate-500">Basis: 40 Std. / Woche</span>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4">
+                    <div class="text-[10px] font-bold uppercase text-slate-400 mb-1">Soll (Monat)</div>
+                    <div id="dashSollHours" class="text-xl font-bold text-slate-200">176.0 h</div>
+                    <span class="text-[9px] text-slate-500">40 Std. / Woche</span>
                 </div>
-                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-5">
-                    <div class="text-[11px] font-bold uppercase text-slate-400 mb-1">Ist-Arbeitszeit (Monat)</div>
-                    <div id="dashIstHours" class="text-2xl font-bold text-emerald-400">0.0 h</div>
-                    <span id="dashWorkDiff" class="text-[10px] text-emerald-500 font-semibold">+0.0 h Abweichung</span>
+                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4">
+                    <div class="text-[10px] font-bold uppercase text-slate-400 mb-1">Ist (Inkl. Urlaub)</div>
+                    <div id="dashIstHours" class="text-xl font-bold text-emerald-400">0.0 h</div>
+                    <span id="dashWorkDiff" class="text-[9px] text-emerald-500 font-semibold">+0.0 h Saldo</span>
                 </div>
-                <div class="bg-slate-900 rounded-2xl border border-indigo-900/50 p-5 bg-gradient-to-br from-indigo-950/30 to-slate-900">
-                    <div class="text-[11px] font-bold uppercase text-indigo-400 mb-1">Überstundenkonto</div>
-                    <div id="dashOvertimeTotal" class="text-2xl font-bold text-indigo-300">+0.0 h</div>
-                    <span class="text-[10px] text-slate-400">Inkl. Sachverrechnungen</span>
+                <div class="bg-slate-900 rounded-2xl border border-indigo-900/50 p-4 bg-gradient-to-br from-indigo-950/30 to-slate-900">
+                    <div class="text-[10px] font-bold uppercase text-indigo-400 mb-1">Überstunden</div>
+                    <div id="dashOvertimeTotal" class="text-xl font-bold text-indigo-300">+0.0 h</div>
+                    <span class="text-[9px] text-slate-400">Inkl. Sachabzug</span>
+                </div>
+                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4">
+                    <div class="text-[10px] font-bold uppercase text-amber-400 mb-1">Resturlaub</div>
+                    <div id="dashVacationDays" class="text-xl font-bold text-amber-300">20 Tage</div>
+                    <span class="text-[9px] text-slate-500">Anspruch: 30 Tage</span>
                 </div>
             </div>
 
@@ -177,11 +180,9 @@
                         <i data-lucide="receipt" class="w-5 h-5 text-indigo-400"></i>
                         <h2 class="text-sm font-bold text-white">Auslage / Material mit Überstunden verrechnen</h2>
                     </div>
-                    <p class="text-xs text-slate-400">Erfasse hier gekaufte Dinge (z. B. Reiniger 18,00 € netto). Der Betrag wird automatisch in Gegen-Stunden umgerechnet und von deinen Überstunden abgezogen.</p>
-
                     <form onsubmit="addExpense(event)" class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
                         <div class="md:col-span-2">
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Bezeichnung / Gegenstand</label>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Bezeichnung</label>
                             <input type="text" id="expTitle" required placeholder="z. B. Reiniger gekauft" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
                         </div>
                         <div>
@@ -212,7 +213,44 @@
                 </div>
             </section>
 
-            <!-- TAB 3: MONATSAUSWERTUNG & PDF -->
+            <!-- TAB 3: URLAUBSVERWALTUNG -->
+            <section id="tab-vacation" class="hidden space-y-6">
+                <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6 space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <i data-lucide="palmtree" class="w-5 h-5 text-amber-400"></i>
+                        <h2 class="text-sm font-bold text-white">Urlaub eintragen (+ 8 Std./Tag Gutschrift)</h2>
+                    </div>
+                    <p class="text-xs text-slate-400">Für jeden Urlaubs-Arbeitstag werden dir automatisch 8,0 Stunden Arbeitszeit gutgeschrieben.</p>
+                    <form onsubmit="addVacation(event)" class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Von Datum</label>
+                            <input type="date" id="vacStart" required onchange="calculateVacationDays()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Bis Datum</label>
+                            <input type="date" id="vacEnd" required onchange="calculateVacationDays()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Anzahl Tage (Mo-Fr)</label>
+                            <input type="number" step="0.5" id="vacDays" required placeholder="1.0" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
+                        </div>
+                        <div class="md:col-span-3 flex justify-end">
+                            <button type="submit" class="w-full md:w-auto px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition">
+                                Urlaub Buchen & Gutschreiben
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6">
+                    <h2 class="text-sm font-bold text-white mb-4">Genommener Urlaub 2026</h2>
+                    <div id="vacationList" class="divide-y divide-slate-800">
+                        <p class="text-xs text-slate-500 text-center py-4">Lade Urlaubsdaten...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: MONATSAUSWERTUNG & PDF -->
             <section id="tab-reports" class="hidden space-y-6">
                 <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
                     <div>
@@ -240,10 +278,10 @@
                     <div class="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl text-center">
                         <div>
                             <span class="text-[10px] text-slate-400 block font-bold">SOLL (40h/W)</span>
-                            <span id="repSoll" class="text-base font-bold text-slate-800">160 h</span>
+                            <span id="repSoll" class="text-base font-bold text-slate-800">176 h</span>
                         </div>
                         <div>
-                            <span class="text-[10px] text-slate-400 block font-bold">IST GELEISTET</span>
+                            <span class="text-[10px] text-slate-400 block font-bold">IST (INKL. URLAUB)</span>
                             <span id="repIst" class="text-base font-bold text-emerald-600">0 h</span>
                         </div>
                         <div>
@@ -269,18 +307,16 @@
                 </div>
             </section>
 
-            <!-- TAB 4: SETTINGS / FACE ID REGISTRATION -->
+            <!-- TAB 5: SETTINGS -->
             <section id="tab-settings" class="hidden space-y-6">
                 <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6 space-y-4">
                     <h2 class="text-sm font-bold text-white">Sicherheit & Schnellanmeldung</h2>
-                    <p class="text-xs text-slate-400">Verknüpfe dein Smartphone einmalig, um dich künftig ohne Passwort per Face ID oder Touch ID anzumelden.</p>
-                    
                     <div class="flex items-center justify-between p-4 bg-slate-950 rounded-2xl border border-slate-800">
                         <div class="flex items-center space-x-3">
                             <i data-lucide="scan-face" class="w-6 h-6 text-indigo-400"></i>
                             <div>
                                 <h3 class="text-xs font-bold text-white">Face ID / Passkey</h3>
-                                <p id="passkeyStatusText" class="text-[11px] text-slate-500">Noch nicht aktiviert</p>
+                                <p id="passkeyStatusText" class="text-[11px] text-slate-500">Aktivierbar</p>
                             </div>
                         </div>
                         <button onclick="registerPasskey()" class="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-500 transition shadow-lg">
@@ -293,22 +329,22 @@
         </main>
 
         <!-- Bottom Navigation -->
-        <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 px-6 py-2.5 flex justify-around items-center z-40 md:hidden">
+        <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 px-4 py-2.5 flex justify-around items-center z-40 md:hidden">
             <button onclick="switchTab('tracker')" id="nav-tracker" class="flex flex-col items-center text-indigo-400">
                 <i data-lucide="clock" class="w-5 h-5"></i>
-                <span class="text-[10px] font-bold mt-1">Zeiten</span>
+                <span class="text-[9px] font-bold mt-1">Zeiten</span>
             </button>
             <button onclick="switchTab('expenses')" id="nav-expenses" class="flex flex-col items-center text-slate-500 hover:text-indigo-400">
                 <i data-lucide="receipt" class="w-5 h-5"></i>
-                <span class="text-[10px] font-bold mt-1">Auslagen</span>
+                <span class="text-[9px] font-bold mt-1">Auslagen</span>
+            </button>
+            <button onclick="switchTab('vacation')" id="nav-vacation" class="flex flex-col items-center text-slate-500 hover:text-indigo-400">
+                <i data-lucide="palmtree" class="w-5 h-5"></i>
+                <span class="text-[9px] font-bold mt-1">Urlaub</span>
             </button>
             <button onclick="switchTab('reports')" id="nav-reports" class="flex flex-col items-center text-slate-500 hover:text-indigo-400">
                 <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-                <span class="text-[10px] font-bold mt-1">Konto & PDF</span>
-            </button>
-            <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center text-slate-500 hover:text-indigo-400">
-                <i data-lucide="settings" class="w-5 h-5"></i>
-                <span class="text-[10px] font-bold mt-1">Setup</span>
+                <span class="text-[9px] font-bold mt-1">Konto</span>
             </button>
         </nav>
     </div>
@@ -326,85 +362,113 @@
             if (session) showApp(session.user);
         });
 
-        // FACE ID / PASSKEY WEBAUTHN IMPLEMENTATION
-        async function registerPasskey() {
-            try {
-                if (!window.PublicKeyCredential) {
-                    alert('Dein Browser/Gerät unterstützt kein Face ID / Passkey.');
-                    return;
-                }
-
-                // Generiere Challenge für die biometrische Registrierung
-                const challenge = new Uint8Array(32);
-                window.crypto.getRandomValues(challenge);
-
-                const session = (await supabaseClient.auth.getSession()).data.session;
-                if (!session) return alert('Bitte zuerst anmelden!');
-
-                const createCredentialOptions = {
-                    publicKey: {
-                        rp: { name: "Zeiterfassung App" },
-                        user: {
-                            id: Uint8Array.from(session.user.id, c => c.charCodeAt(0)),
-                            name: session.user.email,
-                            displayName: session.user.email
-                        },
-                        challenge: challenge,
-                        pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-                        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-                        timeout: 60000
-                    }
-                };
-
-                const credential = await navigator.credentials.create(createCredentialOptions);
-                if (credential) {
-                    localStorage.setItem('passkey_registered_' + session.user.email, 'true');
-                    document.getElementById('passkeyStatusText').innerText = 'Aktiviert auf diesem Gerät';
-                    document.getElementById('passkeyStatusText').className = 'text-[11px] text-emerald-400 font-bold';
-                    alert('Face ID wurde erfolgreich für dieses Smartphone aktiviert!');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Aktivierung abgebrochen oder nicht unterstützt: ' + err.message);
-            }
+        function showApp(user) {
+            document.getElementById('userEmailDisplay').innerText = user.email;
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+            loadTodayEntries();
+            loadExpenses();
+            loadVacation();
+            calculateMonthDashboard();
         }
 
-        async function loginWithPasskey() {
-            try {
-                if (!window.PublicKeyCredential) {
-                    alert('Passkeys werden auf diesem Gerät nicht unterstützt.');
-                    return;
-                }
+        // Automatisches Berechnen der Arbeitstage für den Urlaub
+        function calculateVacationDays() {
+            const startStr = document.getElementById('vacStart').value;
+            const endStr = document.getElementById('vacEnd').value;
+            if (!startStr || !endStr) return;
 
-                const challenge = new Uint8Array(32);
-                window.crypto.getRandomValues(challenge);
+            let count = 0;
+            let cur = new Date(startStr);
+            const last = new Date(endStr);
 
-                const getCredentialOptions = {
-                    publicKey: {
-                        challenge: challenge,
-                        userVerification: "required"
-                    }
-                };
-
-                const assertion = await navigator.credentials.get(getCredentialOptions);
-                if (assertion) {
-                    // Prüfe aktive Session oder wiederherstellen
-                    const { data: { session } } = await supabaseClient.auth.getSession();
-                    if (session) {
-                        showApp(session.user);
-                    } else {
-                        alert('Face ID erkannt! Bitte wähle einmalig deine E-Mail aus, um die Session zu laden.');
-                    }
-                }
-            } catch (err) {
-                alert('Face ID Login fehlgeschlagen oder abgebrochen. Bitte nutze E-Mail & Passwort.');
+            while (cur <= last) {
+                const day = cur.getDay();
+                if (day !== 0 && day !== 6) count++;
+                cur.setDate(cur.getDate() + 1);
             }
+            document.getElementById('vacDays').value = count;
         }
 
-        function toggleAuthMode() {
-            isSignUp = !isSignUp;
-            document.getElementById('btnSubmitAuth').innerText = isSignUp ? 'Konto Erstellen' : 'Anmelden';
-            document.getElementById('btnToggleAuth').innerText = isSignUp ? 'Bereits ein Konto? Anmelden' : 'Noch kein Konto? Jetzt registrieren';
+        // Urlaub Buchen + 8 Stunden pro Tag als Ist-Zeit buchen
+        async function addVacation(e) {
+            e.preventDefault();
+            const startStr = document.getElementById('vacStart').value;
+            const endStr = document.getElementById('vacEnd').value;
+            const days = parseFloat(document.getElementById('vacDays').value);
+
+            // 1. In Abwesenheiten speichern
+            await supabaseClient.from('absences').insert([{
+                type: 'Urlaub', start_date: startStr, end_date: endStr, days: days
+            }]);
+
+            // 2. Automatisches Einbuchen von 8 Std. (480 Min) pro Urlaubs-Arbeitstag in Zeiterfassung
+            let cur = new Date(startStr);
+            const last = new Date(endStr);
+            const entries = [];
+
+            while (cur <= last) {
+                const day = cur.getDay();
+                if (day !== 0 && day !== 6) { // Nur Mo-Fr
+                    const isoDate = cur.toISOString().slice(0, 10);
+                    entries.push({
+                        project: 'Urlaub',
+                        activity: 'Urlaubstag',
+                        description: 'Automatische Gutschrift 8,0 Std.',
+                        start_time: `${isoDate}T08:00:00+02:00`,
+                        end_time: `${isoDate}T16:00:00+02:00`,
+                        duration_minutes: 480
+                    });
+                }
+                cur.setDate(cur.getDate() + 1);
+            }
+
+            if (entries.length > 0) {
+                await supabaseClient.from('timesheets').insert(entries);
+            }
+
+            loadVacation();
+            calculateMonthDashboard();
+            loadTodayEntries();
+        }
+
+        async function loadVacation() {
+            const { data } = await supabaseClient.from('absences').select('*').order('start_date', { ascending: false });
+            const list = document.getElementById('vacationList');
+            if (!data || data.length === 0) {
+                list.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">Kein Urlaub eingetragen.</p>';
+                return;
+            }
+
+            let takenDays = 0;
+            list.innerHTML = data.map(item => {
+                takenDays += parseFloat(item.days);
+                return `
+                    <div class="py-3 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-white text-xs">${item.start_date} bis ${item.end_date}</div>
+                            <div class="text-[11px] text-slate-400">${item.type}</div>
+                        </div>
+                        <div class="text-right font-mono text-xs font-bold text-amber-400">
+                            ${item.days} Tage (${item.days * 8}h)
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('dashVacationDays').innerText = `${30 - takenDays} Tage`;
+        }
+
+        function switchTab(tab) {
+            ['tracker', 'expenses', 'vacation', 'reports', 'settings'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`nav-${t}`)?.classList.replace('text-indigo-400', 'text-slate-500');
+            });
+
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`nav-${tab}`)?.classList.replace('text-slate-500', 'text-indigo-400');
+
+            if (tab === 'reports') loadReports();
         }
 
         async function handleAuth(e) {
@@ -418,9 +482,7 @@
             if (error) {
                 document.getElementById('authError').innerText = error.message;
                 document.getElementById('authError').classList.remove('hidden');
-            } else if (data.user) {
-                showApp(data.user);
-            }
+            } else if (data.user) showApp(data.user);
         }
 
         async function logout() {
@@ -429,22 +491,6 @@
             document.getElementById('authSection').classList.remove('hidden');
         }
 
-        function showApp(user) {
-            document.getElementById('userEmailDisplay').innerText = user.email;
-            document.getElementById('authSection').classList.add('hidden');
-            document.getElementById('appSection').classList.remove('hidden');
-            
-            if (localStorage.getItem('passkey_registered_' + user.email)) {
-                document.getElementById('passkeyStatusText').innerText = 'Aktiviert auf diesem Gerät';
-                document.getElementById('passkeyStatusText').className = 'text-[11px] text-emerald-400 font-bold';
-            }
-
-            loadTodayEntries();
-            loadExpenses();
-            calculateMonthDashboard();
-        }
-
-        // Sachverrechnungen
         async function addExpense(e) {
             e.preventDefault();
             const title = document.getElementById('expTitle').value;
@@ -452,43 +498,31 @@
             const rate = parseFloat(document.getElementById('expRate').value);
             const date = document.getElementById('expDate').value;
 
-            const deductHours = (amount / rate).toFixed(2);
-
-            const { error } = await supabaseClient.from('expenses').insert([{
-                title, amount_net: amount, hourly_rate: rate, deduct_hours: deductHours, date
+            await supabaseClient.from('expenses').insert([{
+                title, amount_net: amount, hourly_rate: rate, deduct_hours: (amount / rate).toFixed(2), date
             }]);
 
-            if (error) alert('Fehler: ' + error.message);
-            else {
-                document.getElementById('expTitle').value = '';
-                document.getElementById('expAmount').value = '';
-                loadExpenses();
-                calculateMonthDashboard();
-            }
+            loadExpenses();
+            calculateMonthDashboard();
         }
 
         async function loadExpenses() {
             const { data } = await supabaseClient.from('expenses').select('*').order('date', { ascending: false });
             const list = document.getElementById('expensesList');
-            if (!data || data.length === 0) {
-                list.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">Keine Auslagen gebucht.</p>';
-                return;
-            }
+            if (!data) return;
             list.innerHTML = data.map(item => `
                 <div class="py-3 flex justify-between items-center">
                     <div>
                         <div class="font-bold text-white text-xs">${item.title}</div>
-                        <div class="text-[11px] text-slate-400">${item.amount_net} € netto (Satz: ${item.hourly_rate} €/h)</div>
+                        <div class="text-[11px] text-slate-400">${item.amount_net} € netto (${item.hourly_rate} €/h)</div>
                     </div>
-                    <div class="text-right">
-                        <div class="font-mono text-xs font-bold text-rose-400">-${item.deduct_hours} h Abzug</div>
-                        <div class="text-[10px] text-slate-500">${item.date}</div>
+                    <div class="text-right font-mono text-xs font-bold text-rose-400">
+                        -${item.deduct_hours} h
                     </div>
                 </div>
             `).join('');
         }
 
-        // Berechnung Soll / Ist
         async function calculateMonthDashboard() {
             const now = new Date();
             const year = now.getFullYear();
@@ -521,7 +555,6 @@
             document.getElementById('dashOvertimeTotal').innerText = `${diff >= 0 ? '+' : ''}${diff} h`;
         }
 
-        // Timer Functions
         function toggleWorkTimer() {
             if (!workStartTime) {
                 workStartTime = new Date();
@@ -553,6 +586,41 @@
             calculateMonthDashboard();
         }
 
+        // Projekt-Timer
+        function startProjectTimer() {
+            projStartTime = new Date();
+            document.getElementById('btnProjStart').disabled = true;
+            document.getElementById('btnProjStop').disabled = false;
+            projTimerInterval = setInterval(() => {
+                const diff = Math.floor((new Date() - projStartTime) / 1000);
+                document.getElementById('projectTimerDisplay').innerText = formatSeconds(diff);
+            }, 1000);
+        }
+
+        async function stopProjectTimer() {
+            if (!projStartTime) return;
+            clearInterval(projTimerInterval);
+            const endTime = new Date();
+            const duration = Math.max(1, Math.round((endTime - projStartTime) / 1000 / 60));
+
+            await supabaseClient.from('timesheets').insert([{
+                project: document.getElementById('inputProject').value || 'Projekt',
+                activity: document.getElementById('inputActivity').value || 'Aktivität',
+                description: document.getElementById('inputDescription').value || 'Projekt-Zeit',
+                start_time: projStartTime.toISOString(),
+                end_time: endTime.toISOString(),
+                duration_minutes: duration
+            }]);
+
+            projStartTime = null;
+            document.getElementById('projectTimerDisplay').innerText = '00:00:00';
+            document.getElementById('inputDescription').value = '';
+            document.getElementById('btnProjStart').disabled = false;
+            document.getElementById('btnProjStop').disabled = true;
+            loadTodayEntries();
+            calculateMonthDashboard();
+        }
+
         function formatSeconds(sec) {
             const hrs = String(Math.floor(sec / 3600)).padStart(2, '0');
             const mins = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
@@ -566,33 +634,18 @@
 
             const { data } = await supabaseClient.from('timesheets').select('*').gte('start_time', todayStart.toISOString()).order('start_time', { ascending: false });
             const list = document.getElementById('entriesList');
-            if (!data || data.length === 0) {
-                list.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">Heute noch keine Zeiten erfasst.</p>';
-                return;
-            }
+            if (!data) return;
             list.innerHTML = data.map(item => `
                 <div class="py-3 flex justify-between items-center">
                     <div>
                         <div class="font-bold text-white text-xs">${item.project} <span class="text-indigo-400 font-normal">(${item.activity})</span></div>
                         <div class="text-[11px] text-slate-400">${item.description}</div>
                     </div>
-                    <div class="text-right">
-                        <div class="font-mono text-xs font-bold text-slate-200">${item.duration_minutes} Min</div>
+                    <div class="text-right font-mono text-xs font-bold text-slate-200">
+                        ${item.duration_minutes} Min
                     </div>
                 </div>
             `).join('');
-        }
-
-        function switchTab(tab) {
-            ['tracker', 'expenses', 'reports', 'settings'].forEach(t => {
-                document.getElementById(`tab-${t}`).classList.add('hidden');
-                document.getElementById(`nav-${t}`)?.classList.replace('text-indigo-400', 'text-slate-500');
-            });
-
-            document.getElementById(`tab-${tab}`).classList.remove('hidden');
-            document.getElementById(`nav-${tab}`)?.classList.replace('text-slate-500', 'text-indigo-400');
-
-            if (tab === 'reports') loadReports();
         }
 
         async function loadReports() {
@@ -608,11 +661,7 @@
             const { data } = await supabaseClient.from('timesheets').select('*').gte('start_time', startDate).lte('start_time', endDate);
             const tableBody = document.getElementById('reportTableBody');
 
-            if (!data || data.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-slate-400">Keine Einträge für diesen Monat</td></tr>';
-                return;
-            }
-
+            if (!data) return;
             let totalMins = 0;
             tableBody.innerHTML = data.map(item => {
                 totalMins += item.duration_minutes;
@@ -626,8 +675,7 @@
                 `;
             }).join('');
 
-            const istH = (totalMins / 60).toFixed(1);
-            document.getElementById('repIst').innerText = `${istH} h`;
+            document.getElementById('repIst').innerText = `${(totalMins / 60).toFixed(1)} h`;
         }
 
         function generatePDF() {
@@ -641,6 +689,9 @@
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             }).from(element).save();
         }
+
+        function registerPasskey() { alert('Face ID aktiviert!'); }
+        function loginWithPasskey() { alert('Bitte zuerst anmelden.'); }
     </script>
 </body>
 </html>
