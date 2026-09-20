@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Supabase JS -->
+    <!-- Supabase JS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -39,7 +39,8 @@
     <script>
         const SUPABASE_URL = 'https://xsdsjwjcggtsarvtazmk.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_FWI2xiEkqUhLTyMOZLgfrw_lwnssrPl';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Nutzen einen eindeutigen Variablennamen "supabaseClient"
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     </script>
 
     <!-- AUTH SECTION (Login / Register / Face ID) -->
@@ -316,7 +317,7 @@
         lucide.createIcons();
 
         // Check active session on startup
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabaseClient.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 showApp(session.user);
             }
@@ -337,8 +338,8 @@
             errorEl.classList.add('hidden');
 
             const { data, error } = isSignUp 
-                ? await supabase.auth.signUp({ email, password })
-                : await supabase.auth.signInWithPassword({ email, password });
+                ? await supabaseClient.auth.signUp({ email, password })
+                : await supabaseClient.auth.signInWithPassword({ email, password });
 
             if (error) {
                 errorEl.innerText = error.message;
@@ -349,7 +350,7 @@
         }
 
         async function logout() {
-            await supabase.auth.signOut();
+            await supabaseClient.auth.signOut();
             document.getElementById('appSection').classList.add('hidden');
             document.getElementById('authSection').classList.remove('hidden');
         }
@@ -431,7 +432,7 @@
         }
 
         async function saveEntry(entry) {
-            const { error } = await supabase.from('timesheets').insert([entry]);
+            const { error } = await supabaseClient.from('timesheets').insert([entry]);
             if (error) alert('Fehler beim Speichern: ' + error.message);
             else loadTodayEntries();
         }
@@ -464,7 +465,7 @@
             const todayStart = new Date();
             todayStart.setHours(0, 0, 0, 0);
 
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('timesheets')
                 .select('*')
                 .gte('start_time', todayStart.toISOString())
@@ -472,7 +473,7 @@
 
             const listEl = document.getElementById('entriesList');
             if (error || !data || data.length === 0) {
-                listEl.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Heute noch keine Zeiten erfassen.</p>';
+                listEl.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Heute noch keine Zeiten erfasst.</p>';
                 document.getElementById('todayTotal').innerText = '0 Std 0 Min';
                 return;
             }
@@ -508,7 +509,7 @@
 
             document.getElementById('reportPeriodText').innerText = `Monat: ${month}/${year}`;
 
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('timesheets')
                 .select('*')
                 .gte('start_time', startDate)
