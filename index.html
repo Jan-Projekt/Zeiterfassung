@@ -68,8 +68,9 @@
 
     <!-- MAIN APP SECTION -->
     <div id="appSection" class="hidden">
+        <!-- HEADER MIT DESKTOP-MENÜ -->
         <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-30">
-            <div class="max-w-4xl mx-auto px-4 py-3.5 flex justify-between items-center">
+            <div class="max-w-5xl mx-auto px-4 py-3.5 flex flex-wrap justify-between items-center gap-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg">
                         <i data-lucide="calculator" class="w-5 h-5"></i>
@@ -79,13 +80,38 @@
                         <span id="userEmailDisplay" class="text-[11px] text-slate-400">angemeldet</span>
                     </div>
                 </div>
-                <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-400 transition">
+
+                <!-- DESKTOP NAVIGATION (sichtbar ab mittleren Bildschirmen md:) -->
+                <nav class="hidden md:flex items-center space-x-1 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800">
+                    <button onclick="switchTab('tracker')" id="desk-nav-tracker" class="px-4 py-2 rounded-xl text-xs font-bold text-indigo-400 bg-indigo-950/50 flex items-center space-x-2 transition">
+                        <i data-lucide="clock" class="w-4 h-4"></i>
+                        <span>Zeiten</span>
+                    </button>
+                    <button onclick="switchTab('expenses')" id="desk-nav-expenses" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white flex items-center space-x-2 transition">
+                        <i data-lucide="receipt" class="w-4 h-4"></i>
+                        <span>Auslagen</span>
+                    </button>
+                    <button onclick="switchTab('vacation')" id="desk-nav-vacation" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white flex items-center space-x-2 transition">
+                        <i data-lucide="palmtree" class="w-4 h-4"></i>
+                        <span>Urlaub</span>
+                    </button>
+                    <button onclick="switchTab('reports')" id="desk-nav-reports" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white flex items-center space-x-2 transition">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                        <span>Konto</span>
+                    </button>
+                    <button onclick="switchTab('settings')" id="desk-nav-settings" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white flex items-center space-x-2 transition">
+                        <i data-lucide="settings" class="w-4 h-4"></i>
+                        <span>Setup</span>
+                    </button>
+                </nav>
+
+                <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-400 transition rounded-xl bg-slate-800/50 md:bg-transparent">
                     <i data-lucide="log-out" class="w-5 h-5"></i>
                 </button>
             </div>
         </header>
 
-        <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        <main class="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
             <!-- OVERTIME & VACATION DASHBOARD CARDS -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -328,7 +354,7 @@
 
         </main>
 
-        <!-- Bottom Navigation -->
+        <!-- MOBILE NAVIGATION (nur auf Smartphones sichtbar) -->
         <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 px-4 py-2.5 flex justify-around items-center z-40 md:hidden">
             <button onclick="switchTab('tracker')" id="nav-tracker" class="flex flex-col items-center text-indigo-400">
                 <i data-lucide="clock" class="w-5 h-5"></i>
@@ -372,6 +398,42 @@
             calculateMonthDashboard();
         }
 
+        // Tab-Wechsel-Logik für Mobile UND PC/Desktop
+        function switchTab(tab) {
+            const tabs = ['tracker', 'expenses', 'vacation', 'reports', 'settings'];
+            
+            tabs.forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                
+                // Mobile
+                const mobBtn = document.getElementById(`nav-${t}`);
+                if (mobBtn) mobBtn.classList.replace('text-indigo-400', 'text-slate-500');
+                
+                // Desktop
+                const deskBtn = document.getElementById(`desk-nav-${t}`);
+                if (deskBtn) {
+                    deskBtn.classList.remove('text-indigo-400', 'bg-indigo-950/50');
+                    deskBtn.classList.add('text-slate-400');
+                }
+            });
+
+            // Aktiven Tab anzeigen
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            
+            // Mobile aktiv stylen
+            const activeMob = document.getElementById(`nav-${tab}`);
+            if (activeMob) activeMob.classList.replace('text-slate-500', 'text-indigo-400');
+            
+            // Desktop aktiv stylen
+            const activeDesk = document.getElementById(`desk-nav-${tab}`);
+            if (activeDesk) {
+                activeDesk.classList.remove('text-slate-400');
+                activeDesk.classList.add('text-indigo-400', 'bg-indigo-950/50');
+            }
+
+            if (tab === 'reports') loadReports();
+        }
+
         // Automatisches Berechnen der Arbeitstage für den Urlaub
         function calculateVacationDays() {
             const startStr = document.getElementById('vacStart').value;
@@ -397,19 +459,17 @@
             const endStr = document.getElementById('vacEnd').value;
             const days = parseFloat(document.getElementById('vacDays').value);
 
-            // 1. In Abwesenheiten speichern
             await supabaseClient.from('absences').insert([{
                 type: 'Urlaub', start_date: startStr, end_date: endStr, days: days
             }]);
 
-            // 2. Automatisches Einbuchen von 8 Std. (480 Min) pro Urlaubs-Arbeitstag in Zeiterfassung
             let cur = new Date(startStr);
             const last = new Date(endStr);
             const entries = [];
 
             while (cur <= last) {
                 const day = cur.getDay();
-                if (day !== 0 && day !== 6) { // Nur Mo-Fr
+                if (day !== 0 && day !== 6) {
                     const isoDate = cur.toISOString().slice(0, 10);
                     entries.push({
                         project: 'Urlaub',
@@ -457,18 +517,6 @@
             }).join('');
 
             document.getElementById('dashVacationDays').innerText = `${30 - takenDays} Tage`;
-        }
-
-        function switchTab(tab) {
-            ['tracker', 'expenses', 'vacation', 'reports', 'settings'].forEach(t => {
-                document.getElementById(`tab-${t}`).classList.add('hidden');
-                document.getElementById(`nav-${t}`)?.classList.replace('text-indigo-400', 'text-slate-500');
-            });
-
-            document.getElementById(`tab-${tab}`).classList.remove('hidden');
-            document.getElementById(`nav-${tab}`)?.classList.replace('text-slate-500', 'text-indigo-400');
-
-            if (tab === 'reports') loadReports();
         }
 
         async function handleAuth(e) {
@@ -586,7 +634,6 @@
             calculateMonthDashboard();
         }
 
-        // Projekt-Timer
         function startProjectTimer() {
             projStartTime = new Date();
             document.getElementById('btnProjStart').disabled = true;
