@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zeiterfassung</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2pdf.js für PDF-Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen pb-20 md:pb-6">
+
+    <!-- Supabase Configuration -->
+    <script>
+        const SUPABASE_URL = 'https://xsdsjwjcggtsarvtazmk.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_FWI2xiEkqUhLTyMOZLgfrw_lwnssrPl';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    </script>
+
+    <!-- Header / Navbar -->
+    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i data-lucide="clock" class="w-6 h-6"></i>
+                <h1 class="text-xl font-bold tracking-tight">TimeTracker</h1>
+            </div>
+            <div id="connectionStatus" class="flex items-center text-xs bg-indigo-700 px-2.5 py-1 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-yellow-400 mr-2 animate-pulse" id="statusDot"></span>
+                <span id="statusText">Verbinde...</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- TAB: TRACKER -->
+        <section id="tab-tracker" class="space-y-6">
+            
+            <!-- Live Timer Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
+                <div class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-1">Aktueller Timer</div>
+                <div id="timerDisplay" class="text-5xl font-mono font-bold text-gray-800 my-4">00:00:00</div>
+                
+                <div class="flex justify-center space-x-3 mb-6">
+                    <button id="btnStart" onclick="startTimer()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 transition shadow-sm">
+                        <i data-lucide="play" class="w-5 h-5"></i>
+                        <span>Start</span>
+                    </button>
+                    <button id="btnStop" onclick="stopTimer()" disabled class="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 transition shadow-sm">
+                        <i data-lucide="square" class="w-5 h-5"></i>
+                        <span>Stopp</span>
+                    </button>
+                </div>
+
+                <!-- Input Details for Timer / Manual Entry -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left border-t border-gray-100 pt-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Projekt</label>
+                        <select id="inputProject" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="Projekt A">Projekt A</option>
+                            <option value="Projekt B">Projekt B</option>
+                            <option value="Projekt C">Projekt C</option>
+                            <option value="Interne Aufgaben">Interne Aufgaben</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Aktivität</label>
+                        <select id="inputActivity" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="Entwicklung">Entwicklung</option>
+                            <option value="Besprechung">Besprechung</option>
+                            <option value="Konzeption">Konzeption</option>
+                            <option value="Support / Orga">Support / Orga</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Beschreibung / Notiz</label>
+                        <input type="text" id="inputDescription" placeholder="Woran hast du gearbeitet?" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manuelle Erfassung (Akkordeon/Kollapsbar) -->
+            <details class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                <summary class="font-semibold text-gray-700 cursor-pointer flex justify-between items-center">
+                    <span>+ Manuell Zeit nachtragen</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
+                </summary>
+                <form id="manualForm" onsubmit="saveManualTime(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Startzeit</label>
+                        <input type="datetime-local" id="manualStart" required class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Endzeit</label>
+                        <input type="datetime-local" id="manualEnd" required class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg text-sm transition">
+                            Eintrag Speichern
+                        </button>
+                    </div>
+                </form>
+            </details>
+
+            <!-- Letzte Einträge -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center justify-between">
+                    <span>Heute erfasste Zeiten</span>
+                    <span id="todayTotal" class="text-sm font-normal bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full">0 Std 0 Min</span>
+                </h2>
+                <div id="entriesList" class="divide-y divide-gray-100">
+                    <p class="text-sm text-gray-400 text-center py-4">Lade Einträge...</p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- TAB: AUSWERTUNG & PDF -->
+        <section id="tab-reports" class="hidden space-y-6">
+            
+            <!-- Controls / Filter -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Monat auswählen</label>
+                    <input type="month" id="reportMonth" onchange="loadReports()" class="bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm">
+                </div>
+                <button onclick="generatePDF()" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center space-x-2 transition">
+                    <i data-lucide="file-down" class="w-4 h-4"></i>
+                    <span>Monatsbericht (PDF) Herunterladen</span>
+                </button>
+            </div>
+
+            <!-- Printable PDF Area -->
+            <div id="pdfContent" class="space-y-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                
+                <!-- Report Header -->
+                <div class="border-b border-gray-200 pb-4 flex justify-between items-end">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Monatsbericht Zeiterfassung</h2>
+                        <p id="reportPeriodText" class="text-sm text-gray-500">Monat: --</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-gray-400 block">Gesamtarbeitszeit</span>
+                        <span id="reportTotalHours" class="text-2xl font-bold text-indigo-600">0.0 Std</span>
+                    </div>
+                </div>
+
+                <!-- Charts Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3 text-center">Nach Projekten</h3>
+                        <div class="h-48 relative">
+                            <canvas id="chartProjects"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3 text-center">Nach Aktivitätstyp</h3>
+                        <div class="h-48 relative">
+                            <canvas id="chartActivities"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detail Table -->
+                <div class="pt-4">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Detaillierte Zeiteinträge</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-600">
+                            <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+                                <tr>
+                                    <th class="p-2.5 rounded-l-lg">Datum</th>
+                                    <th class="p-2.5">Projekt</th>
+                                    <th class="p-2.5">Aktivität</th>
+                                    <th class="p-2.5">Beschreibung</th>
+                                    <th class="p-2.5 rounded-r-lg text-right">Dauer</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTableBody" class="divide-y divide-gray-100">
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-gray-400">Keine Daten ausgewählt</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation (Mobile First) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-2 flex justify-around items-center z-20 md:hidden">
+        <button onclick="switchTab('tracker')" id="nav-tracker" class="flex flex-col items-center text-indigo-600">
+            <i data-lucide="clock" class="w-5 h-5"></i>
+            <span class="text-xs mt-1">Tracker</span>
+        </button>
+        <button onclick="switchTab('reports')" id="nav-reports" class="flex flex-col items-center text-gray-400 hover:text-indigo-600">
+            <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+            <span class="text-xs mt-1">Auswertung</span>
+        </button>
+    </nav>
+
+    <!-- Desktop Tab Buttons (Floating upper right on large screens) -->
+    <script>
+        // Set current month in filter
+        document.getElementById('reportMonth').value = new Date().toISOString().slice(0, 7);
+
+        let timerInterval = null;
+        let startTime = null;
+        let chartProjectsInstance = null;
+        let chartActivitiesInstance = null;
+
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Check Supabase Connection
+        async function checkConnection() {
+            try {
+                const { data, error } = await supabase.from('timesheets').select('id').limit(1);
+                if (error) throw error;
+                document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-emerald-500 mr-2';
+                document.getElementById('statusText').innerText = 'Online';
+                loadTodayEntries();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-red-500 mr-2';
+                document.getElementById('statusText').innerText = 'Offline/Fehler';
+            }
+        }
+
+        // Tab Switching
+        function switchTab(tab) {
+            document.getElementById('tab-tracker').classList.add('hidden');
+            document.getElementById('tab-reports').classList.add('hidden');
+            document.getElementById('nav-tracker').classList.replace('text-indigo-600', 'text-gray-400');
+            document.getElementById('nav-reports').classList.replace('text-indigo-600', 'text-gray-400');
+
+            if (tab === 'tracker') {
+                document.getElementById('tab-tracker').classList.remove('hidden');
+                document.getElementById('nav-tracker').classList.replace('text-gray-400', 'text-indigo-600');
+            } else {
+                document.getElementById('tab-reports').classList.remove('hidden');
+                document.getElementById('nav-reports').classList.replace('text-gray-400', 'text-indigo-600');
+                loadReports();
+            }
+        }
+
+        // Timer Logic
+        function startTimer() {
+            startTime = new Date();
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('btnStop').disabled = false;
+            
+            timerInterval = setInterval(() => {
+                const now = new Date();
+                const diff = Math.floor((now - startTime) / 1000);
+                const hrs = String(Math.floor(diff / 3600)).padStart(2, '0');
+                const mins = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+                const secs = String(diff % 60).padStart(2, '0');
+                document.getElementById('timerDisplay').innerText = `${hrs}:${mins}:${secs}`;
+            }, 1000);
+        }
+
+        async function stopTimer() {
+            if (!startTime) return;
+            clearInterval(timerInterval);
+            const endTime = new Date();
+            const durationMinutes = Math.max(1, Math.round((endTime - startTime) / 1000 / 60));
+
+            const entry = {
+                project: document.getElementById('inputProject').value,
+                activity: document.getElementById('inputActivity').value,
+                description: document.getElementById('inputDescription').value || 'Keine Beschreibung',
+                start_time: startTime.toISOString(),
+                end_time: endTime.toISOString(),
+                duration_minutes: durationMinutes
+            };
+
+            await saveEntry(entry);
+
+            // Reset UI
+            document.getElementById('timerDisplay').innerText = '00:00:00';
+            document.getElementById('inputDescription').value = '';
+            document.getElementById('btnStart').disabled = false;
+            document.getElementById('btnStop').disabled = true;
+            startTime = null;
+        }
+
+        // Save Entry to Supabase
+        async function saveEntry(entry) {
+            try {
+                const { error } = await supabase.from('timesheets').insert([entry]);
+                if (error) throw error;
+                loadTodayEntries();
+            } catch (err) {
+                alert('Fehler beim Speichern: ' + err.message);
+            }
+        }
+
+        // Save Manual Time
+        async function saveManualTime(e) {
+            e.preventDefault();
+            const start = new Date(document.getElementById('manualStart').value);
+            const end = new Date(document.getElementById('manualEnd').value);
+
+            if (end <= start) {
+                alert('Endzeit muss nach Startzeit liegen!');
+                return;
+            }
+
+            const durationMinutes = Math.round((end - start) / 1000 / 60);
+
+            const entry = {
+                project: document.getElementById('inputProject').value,
+                activity: document.getElementById('inputActivity').value,
+                description: document.getElementById('inputDescription').value || 'Manuell nachgetragen',
+                start_time: start.toISOString(),
+                end_time: end.toISOString(),
+                duration_minutes: durationMinutes
+            };
+
+            await saveEntry(entry);
+            document.getElementById('manualForm').reset();
+        }
+
+        // Load Today's Entries
+        async function loadTodayEntries() {
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+
+            const { data, error } = await supabase
+                .from('timesheets')
+                .select('*')
+                .gte('start_time', todayStart.toISOString())
+                .order('start_time', { ascending: false });
+
+            const listEl = document.getElementById('entriesList');
+            if (error || !data || data.length === 0) {
+                listEl.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Heute noch keine Zeiten erfasst.</p>';
+                document.getElementById('todayTotal').innerText = '0 Std 0 Min';
+                return;
+            }
+
+            let totalMins = 0;
+            listEl.innerHTML = data.map(item => {
+                totalMins += item.duration_minutes;
+                const timeStr = new Date(item.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return `
+                    <div class="py-3 flex justify-between items-center">
+                        <div>
+                            <div class="font-semibold text-gray-800 text-sm">${item.project} <span class="text-xs text-indigo-600 font-normal ml-1">(${item.activity})</span></div>
+                            <div class="text-xs text-gray-500">${item.description}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-mono text-sm font-medium text-gray-700">${item.duration_minutes} Min</div>
+                            <div class="text-xs text-gray-400">${timeStr}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const hrs = Math.floor(totalMins / 60);
+            const mins = totalMins % 60;
+            document.getElementById('todayTotal').innerText = `${hrs} Std ${mins} Min`;
+        }
+
+        // Load Reports & Render Charts
+        async function loadReports() {
+            const monthStr = document.getElementById('reportMonth').value;
+            if (!monthStr) return;
+
+            const [year, month] = monthStr.split('-');
+            const startDate = new Date(year, month - 1, 1).toISOString();
+            const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+
+            document.getElementById('reportPeriodText').innerText = `Monat: ${month}/${year}`;
+
+            const { data, error } = await supabase
+                .from('timesheets')
+                .select('*')
+                .gte('start_time', startDate)
+                .lte('start_time', endDate)
+                .order('start_time', { ascending: true });
+
+            if (error) {
+                console.error(error);
+                return;
+            }
+
+            // Calculate Aggregates
+            let totalMinutes = 0;
+            const projectTotals = {};
+            const activityTotals = {};
+
+            const tableBody = document.getElementById('reportTableBody');
+
+            if (!data || data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-400">Keine Daten für diesen Monat vorhanden</td></tr>';
+                document.getElementById('reportTotalHours').innerText = '0.0 Std';
+                renderCharts({}, {});
+                return;
+            }
+
+            tableBody.innerHTML = data.map(item => {
+                totalMinutes += item.duration_minutes;
+                projectTotals[item.project] = (projectTotals[item.project] || 0) + item.duration_minutes;
+                activityTotals[item.activity] = (activityTotals[item.activity] || 0) + item.duration_minutes;
+
+                const dateStr = new Date(item.start_time).toLocaleDateString('de-DE');
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-2.5 text-xs">${dateStr}</td>
+                        <td class="p-2.5 font-medium text-gray-800">${item.project}</td>
+                        <td class="p-2.5 text-xs text-indigo-600">${item.activity}</td>
+                        <td class="p-2.5 text-xs text-gray-500">${item.description}</td>
+                        <td class="p-2.5 text-right font-mono text-xs">${(item.duration_minutes / 60).toFixed(1)} h</td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('reportTotalHours').innerText = `${(totalMinutes / 60).toFixed(1)} Std`;
+
+            renderCharts(projectTotals, activityTotals);
+        }
+
+        // Chart.js Rendering
+        function renderCharts(projectData, activityData) {
+            const ctxProjects = document.getElementById('chartProjects').getContext('2d');
+            const ctxActivities = document.getElementById('chartActivities').getContext('2d');
+
+            if (chartProjectsInstance) chartProjectsInstance.destroy();
+            if (chartActivitiesInstance) chartActivitiesInstance.destroy();
+
+            chartProjectsInstance = new Chart(ctxProjects, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(projectData),
+                    datasets: [{
+                        data: Object.values(projectData).map(m => (m / 60).toFixed(1)),
+                        backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            chartActivitiesInstance = new Chart(ctxActivities, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(activityData),
+                    datasets: [{
+                        label: 'Stunden',
+                        data: Object.values(activityData).map(m => (m / 60).toFixed(1)),
+                        backgroundColor: '#6366f1'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        // Generate PDF
+        function generatePDF() {
+            const element = document.getElementById('pdfContent');
+            const monthStr = document.getElementById('reportMonth').value;
+            
+            const opt = {
+                margin:       [10, 10, 10, 10],
+                filename:     `Zeiterfassung_Bericht_${monthStr}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+        }
+
+        // Initialize Status
+        checkConnection();
+    </script>
+</body>
+</html>
