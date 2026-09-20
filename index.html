@@ -34,6 +34,18 @@
                 <p class="text-xs text-slate-400 mt-1">Anmeldung zum Überstunden- & Zeitkonto</p>
             </div>
 
+            <!-- Face ID / Passkey Quick Login Button -->
+            <button id="btnFaceID" onclick="loginWithPasskey()" class="w-full mb-6 py-3.5 px-4 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-2xl border border-slate-700 flex items-center justify-center space-x-3 transition active:scale-95 shadow-lg">
+                <i data-lucide="scan-face" class="w-5 h-5 text-indigo-400"></i>
+                <span>Mit Face ID / Passkey anmelden</span>
+            </button>
+
+            <div class="relative flex py-2 items-center mb-6">
+                <div class="flex-grow border-t border-slate-800"></div>
+                <span class="flex-shrink mx-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">oder E-Mail</span>
+                <div class="flex-grow border-t border-slate-800"></div>
+            </div>
+
             <form id="authForm" onsubmit="handleAuth(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-1">E-Mail Adresse</label>
@@ -158,7 +170,7 @@
                 </div>
             </section>
 
-            <!-- TAB 2: SACHVERRECHNUNG & AUSLAGEN (Neu!) -->
+            <!-- TAB 2: SACHVERRECHNUNG & AUSLAGEN -->
             <section id="tab-expenses" class="hidden space-y-6">
                 <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6 space-y-4">
                     <div class="flex items-center space-x-3">
@@ -192,7 +204,6 @@
                     </form>
                 </div>
 
-                <!-- Liste aller Verrechnungen -->
                 <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6">
                     <h2 class="text-sm font-bold text-white mb-4">Gebuchte Sachverrechnungen</h2>
                     <div id="expensesList" class="divide-y divide-slate-800">
@@ -258,6 +269,27 @@
                 </div>
             </section>
 
+            <!-- TAB 4: SETTINGS / FACE ID REGISTRATION -->
+            <section id="tab-settings" class="hidden space-y-6">
+                <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6 space-y-4">
+                    <h2 class="text-sm font-bold text-white">Sicherheit & Schnellanmeldung</h2>
+                    <p class="text-xs text-slate-400">Verknüpfe dein Smartphone einmalig, um dich künftig ohne Passwort per Face ID oder Touch ID anzumelden.</p>
+                    
+                    <div class="flex items-center justify-between p-4 bg-slate-950 rounded-2xl border border-slate-800">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="scan-face" class="w-6 h-6 text-indigo-400"></i>
+                            <div>
+                                <h3 class="text-xs font-bold text-white">Face ID / Passkey</h3>
+                                <p id="passkeyStatusText" class="text-[11px] text-slate-500">Noch nicht aktiviert</p>
+                            </div>
+                        </div>
+                        <button onclick="registerPasskey()" class="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-500 transition shadow-lg">
+                            Aktivieren
+                        </button>
+                    </div>
+                </div>
+            </section>
+
         </main>
 
         <!-- Bottom Navigation -->
@@ -274,6 +306,10 @@
                 <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
                 <span class="text-[10px] font-bold mt-1">Konto & PDF</span>
             </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center text-slate-500 hover:text-indigo-400">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold mt-1">Setup</span>
+            </button>
         </nav>
     </div>
 
@@ -289,6 +325,81 @@
         supabaseClient.auth.getSession().then(({ data: { session } }) => {
             if (session) showApp(session.user);
         });
+
+        // FACE ID / PASSKEY WEBAUTHN IMPLEMENTATION
+        async function registerPasskey() {
+            try {
+                if (!window.PublicKeyCredential) {
+                    alert('Dein Browser/Gerät unterstützt kein Face ID / Passkey.');
+                    return;
+                }
+
+                // Generiere Challenge für die biometrische Registrierung
+                const challenge = new Uint8Array(32);
+                window.crypto.getRandomValues(challenge);
+
+                const session = (await supabaseClient.auth.getSession()).data.session;
+                if (!session) return alert('Bitte zuerst anmelden!');
+
+                const createCredentialOptions = {
+                    publicKey: {
+                        rp: { name: "Zeiterfassung App" },
+                        user: {
+                            id: Uint8Array.from(session.user.id, c => c.charCodeAt(0)),
+                            name: session.user.email,
+                            displayName: session.user.email
+                        },
+                        challenge: challenge,
+                        pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+                        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                        timeout: 60000
+                    }
+                };
+
+                const credential = await navigator.credentials.create(createCredentialOptions);
+                if (credential) {
+                    localStorage.setItem('passkey_registered_' + session.user.email, 'true');
+                    document.getElementById('passkeyStatusText').innerText = 'Aktiviert auf diesem Gerät';
+                    document.getElementById('passkeyStatusText').className = 'text-[11px] text-emerald-400 font-bold';
+                    alert('Face ID wurde erfolgreich für dieses Smartphone aktiviert!');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Aktivierung abgebrochen oder nicht unterstützt: ' + err.message);
+            }
+        }
+
+        async function loginWithPasskey() {
+            try {
+                if (!window.PublicKeyCredential) {
+                    alert('Passkeys werden auf diesem Gerät nicht unterstützt.');
+                    return;
+                }
+
+                const challenge = new Uint8Array(32);
+                window.crypto.getRandomValues(challenge);
+
+                const getCredentialOptions = {
+                    publicKey: {
+                        challenge: challenge,
+                        userVerification: "required"
+                    }
+                };
+
+                const assertion = await navigator.credentials.get(getCredentialOptions);
+                if (assertion) {
+                    // Prüfe aktive Session oder wiederherstellen
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if (session) {
+                        showApp(session.user);
+                    } else {
+                        alert('Face ID erkannt! Bitte wähle einmalig deine E-Mail aus, um die Session zu laden.');
+                    }
+                }
+            } catch (err) {
+                alert('Face ID Login fehlgeschlagen oder abgebrochen. Bitte nutze E-Mail & Passwort.');
+            }
+        }
 
         function toggleAuthMode() {
             isSignUp = !isSignUp;
@@ -322,6 +433,12 @@
             document.getElementById('userEmailDisplay').innerText = user.email;
             document.getElementById('authSection').classList.add('hidden');
             document.getElementById('appSection').classList.remove('hidden');
+            
+            if (localStorage.getItem('passkey_registered_' + user.email)) {
+                document.getElementById('passkeyStatusText').innerText = 'Aktiviert auf diesem Gerät';
+                document.getElementById('passkeyStatusText').className = 'text-[11px] text-emerald-400 font-bold';
+            }
+
             loadTodayEntries();
             loadExpenses();
             calculateMonthDashboard();
@@ -377,7 +494,6 @@
             const year = now.getFullYear();
             const month = now.getMonth();
 
-            // Arbeitstage im Monat berechnen (Mo-Fr)
             let workDays = 0;
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             for (let d = 1; d <= daysInMonth; d++) {
@@ -385,10 +501,9 @@
                 if (dayOfWeek !== 0 && dayOfWeek !== 6) workDays++;
             }
 
-            const sollHours = workDays * 8; // 40 Std/Woche = 8h/Tag
+            const sollHours = workDays * 8;
             document.getElementById('dashSollHours').innerText = `${sollHours}.0 h`;
 
-            // Ist-Zeiten abfragen
             const startDate = new Date(year, month, 1).toISOString();
             const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
 
@@ -398,7 +513,6 @@
 
             document.getElementById('dashIstHours').innerText = `${istHours} h`;
 
-            // Auslagen-Abzüge abfragen
             const { data: exps } = await supabaseClient.from('expenses').select('deduct_hours').gte('date', `${year}-${String(month+1).padStart(2,'0')}-01`);
             let deductHours = (exps || []).reduce((acc, curr) => acc + parseFloat(curr.deduct_hours), 0);
 
@@ -470,7 +584,7 @@
         }
 
         function switchTab(tab) {
-            ['tracker', 'expenses', 'reports'].forEach(t => {
+            ['tracker', 'expenses', 'reports', 'settings'].forEach(t => {
                 document.getElementById(`tab-${t}`).classList.add('hidden');
                 document.getElementById(`nav-${t}`)?.classList.replace('text-indigo-400', 'text-slate-500');
             });
