@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TimeTracker Pro</title>
+    <title>Zeiterfassung & Überstundenkonto</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -12,318 +12,284 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- html2pdf.js für PDF-Export -->
+    <!-- html2pdf.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#f0f3ff',
-                            100: '#e0e7ff',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen pb-20 md:pb-6 antialiased">
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen pb-24 md:pb-8 antialiased">
 
-    <!-- Supabase Configuration -->
     <script>
         const SUPABASE_URL = 'https://xsdsjwjcggtsarvtazmk.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_FWI2xiEkqUhLTyMOZLgfrw_lwnssrPl';
-        // Nutzen einen eindeutigen Variablennamen "supabaseClient"
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     </script>
 
-    <!-- AUTH SECTION (Login / Register / Face ID) -->
-    <div id="authSection" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-800">
-        <div class="w-full max-w-md bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/20">
+    <!-- AUTH SECTION -->
+    <div id="authSection" class="min-h-screen flex items-center justify-center p-4 bg-slate-950">
+        <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 mb-4">
                     <i data-lucide="clock" class="w-8 h-8"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-slate-900">TimeTracker Pro</h1>
-                <p class="text-sm text-slate-500 mt-1">Bitte melde dich an, um fortzufahren</p>
-            </div>
-
-            <!-- Face ID / Passkey Quick Login Button -->
-            <button id="btnFaceID" onclick="loginWithPasskey()" class="w-full mb-6 py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-2xl shadow-lg flex items-center justify-center space-x-3 transition transform active:scale-95">
-                <i data-lucide="scan-face" class="w-6 h-6 text-indigo-400"></i>
-                <span>Mit Face ID / Passkey anmelden</span>
-            </button>
-
-            <div class="relative flex py-2 items-center mb-6">
-                <div class="flex-grow border-t border-slate-200"></div>
-                <span class="flex-shrink mx-4 text-xs font-semibold text-slate-400 uppercase">oder E-Mail</span>
-                <div class="flex-grow border-t border-slate-200"></div>
+                <h1 class="text-2xl font-bold text-white">Zeiterfassung</h1>
+                <p class="text-xs text-slate-400 mt-1">Anmeldung zum Überstunden- & Zeitkonto</p>
             </div>
 
             <form id="authForm" onsubmit="handleAuth(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">E-Mail Adresse</label>
-                    <input type="email" id="authEmail" required placeholder="name@beispiel.de" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">E-Mail Adresse</label>
+                    <input type="email" id="authEmail" required placeholder="name@beispiel.de" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Passwort</label>
-                    <input type="password" id="authPassword" required placeholder="••••••••" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Passwort</label>
+                    <input type="password" id="authPassword" required placeholder="••••••••" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
-
-                <div id="authError" class="hidden p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600"></div>
-
-                <button type="submit" id="btnSubmitAuth" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-2xl shadow-lg shadow-indigo-500/25 transition">
+                <div id="authError" class="hidden p-3 bg-red-950/50 border border-red-800 rounded-xl text-xs text-red-400"></div>
+                <button type="submit" id="btnSubmitAuth" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-2xl shadow-lg transition">
                     Anmelden
                 </button>
             </form>
-
             <div class="mt-6 text-center">
-                <button onclick="toggleAuthMode()" id="btnToggleAuth" class="text-xs text-indigo-600 hover:underline font-medium">
+                <button onclick="toggleAuthMode()" id="btnToggleAuth" class="text-xs text-indigo-400 hover:underline font-medium">
                     Noch kein Konto? Jetzt registrieren
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- MAIN APP CONTENT (Hidden when not logged in) -->
+    <!-- MAIN APP SECTION -->
     <div id="appSection" class="hidden">
-        <!-- Header -->
-        <header class="bg-white/80 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30">
-            <div class="max-w-3xl mx-auto px-4 py-3.5 flex justify-between items-center">
+        <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-30">
+            <div class="max-w-4xl mx-auto px-4 py-3.5 flex justify-between items-center">
                 <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20">
-                        <i data-lucide="clock" class="w-5 h-5"></i>
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg">
+                        <i data-lucide="calculator" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <h1 class="text-base font-bold text-slate-900 leading-none">TimeTracker</h1>
-                        <span id="userEmailDisplay" class="text-xs text-slate-400">angemeldet</span>
+                        <h1 class="text-base font-bold text-white leading-none">Zeiterfassung & Überstunden</h1>
+                        <span id="userEmailDisplay" class="text-[11px] text-slate-400">angemeldet</span>
                     </div>
                 </div>
-                <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-500 rounded-xl transition">
+                <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-400 transition">
                     <i data-lucide="log-out" class="w-5 h-5"></i>
                 </button>
             </div>
         </header>
 
-        <main class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
 
-            <!-- TAB 1: TRACKER -->
+            <!-- OVERTIME & VACATION DASHBOARD CARDS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-5">
+                    <div class="text-[11px] font-bold uppercase text-slate-400 mb-1">Soll-Arbeitszeit (Monat)</div>
+                    <div id="dashSollHours" class="text-2xl font-bold text-slate-200">160.0 h</div>
+                    <span class="text-[10px] text-slate-500">Basis: 40 Std. / Woche</span>
+                </div>
+                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-5">
+                    <div class="text-[11px] font-bold uppercase text-slate-400 mb-1">Ist-Arbeitszeit (Monat)</div>
+                    <div id="dashIstHours" class="text-2xl font-bold text-emerald-400">0.0 h</div>
+                    <span id="dashWorkDiff" class="text-[10px] text-emerald-500 font-semibold">+0.0 h Abweichung</span>
+                </div>
+                <div class="bg-slate-900 rounded-2xl border border-indigo-900/50 p-5 bg-gradient-to-br from-indigo-950/30 to-slate-900">
+                    <div class="text-[11px] font-bold uppercase text-indigo-400 mb-1">Überstundenkonto</div>
+                    <div id="dashOvertimeTotal" class="text-2xl font-bold text-indigo-300">+0.0 h</div>
+                    <span class="text-[10px] text-slate-400">Inkl. Sachverrechnungen</span>
+                </div>
+            </div>
+
+            <!-- TAB 1: TRACKER & TAGESERFASSUNG -->
             <section id="tab-tracker" class="space-y-6">
-                <!-- Live Timer Box -->
-                <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 md:p-8 text-center relative overflow-hidden">
-                    <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Zeiterfassung</div>
-                    <div id="timerDisplay" class="text-6xl font-mono font-bold tracking-tight text-slate-900 my-4">00:00:00</div>
-                    
-                    <div class="flex justify-center space-x-4 mb-6">
-                        <button id="btnStart" onclick="startTimer()" class="flex-1 max-w-[160px] bg-emerald-500 hover:bg-emerald-600 text-white py-3.5 rounded-2xl font-semibold flex items-center justify-center space-x-2 transition shadow-lg shadow-emerald-500/20 active:scale-95">
-                            <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-                            <span>Start</span>
-                        </button>
-                        <button id="btnStop" onclick="stopTimer()" disabled class="flex-1 max-w-[160px] bg-rose-500 hover:bg-rose-600 disabled:opacity-40 text-white py-3.5 rounded-2xl font-semibold flex items-center justify-center space-x-2 transition shadow-lg shadow-rose-500/20 active:scale-95">
-                            <i data-lucide="square" class="w-5 h-5 fill-current"></i>
-                            <span>Stopp</span>
-                        </button>
+                <!-- Live Work Timer -->
+                <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6 shadow-xl">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold uppercase text-indigo-400 tracking-wider">Haupt-Arbeitszeit</span>
+                        <span id="workStateBadge" class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Bereit</span>
                     </div>
-
-                    <!-- Input Fields -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left border-t border-slate-100 pt-6">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Projekt</label>
-                            <select id="inputProject" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="Projekt A">Projekt A</option>
-                                <option value="Projekt B">Projekt B</option>
-                                <option value="Besprechung">Besprechung</option>
-                                <option value="Interne Aufgaben">Interne Aufgaben</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Aktivität</label>
-                            <select id="inputActivity" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="Entwicklung">Entwicklung</option>
-                                <option value="Meeting">Meeting</option>
-                                <option value="Konzeption">Konzeption</option>
-                                <option value="Orga">Orga</option>
-                            </select>
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Beschreibung</label>
-                            <input type="text" id="inputDescription" placeholder="Woran arbeitest du gerade?" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
+                    <div id="workTimerDisplay" class="text-4xl font-mono font-bold text-white my-2">00:00:00</div>
+                    <div class="flex space-x-3 mt-4">
+                        <button id="btnWorkStart" onclick="toggleWorkTimer()" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition">
+                            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                            <span id="btnWorkStartText">Arbeitsbeginn</span>
+                        </button>
+                        <button id="btnWorkStop" onclick="stopWorkTimer()" disabled class="flex-1 py-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-30 text-white text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition">
+                            <i data-lucide="square" class="w-4 h-4 fill-current"></i>
+                            <span>Feierabend</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Manuelle Erfassung -->
-                <details class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 transition">
-                    <summary class="font-semibold text-slate-700 cursor-pointer flex justify-between items-center text-sm">
-                        <span class="flex items-center space-x-2">
-                            <i data-lucide="plus-circle" class="w-4 h-4 text-indigo-600"></i>
-                            <span>Manuell Zeit nachtragen</span>
-                        </span>
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
-                    </summary>
-                    <form id="manualForm" onsubmit="saveManualTime(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100">
+                <!-- Projekt- & Aufgaben-Timer -->
+                <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold uppercase text-indigo-400">Projekt / Leistung zuordnen</span>
+                        <span id="projectTimerDisplay" class="text-2xl font-mono font-bold text-white">00:00:00</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1">Startzeit</label>
-                            <input type="datetime-local" id="manualStart" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Projekt</label>
+                            <input type="text" id="inputProject" placeholder="z. B. Kunde A / Projekt X" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1">Endzeit</label>
-                            <input type="datetime-local" id="manualEnd" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tätigkeit</label>
+                            <input type="text" id="inputActivity" placeholder="z. B. Besprechung, Entwicklung" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
                         </div>
                         <div class="md:col-span-2">
-                            <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-xl text-sm transition">
-                                Eintrag Speichern
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Notiz</label>
+                            <input type="text" id="inputDescription" placeholder="Kurze Beschreibung" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
+                        </div>
+                    </div>
+                    <div class="flex space-x-3 pt-2">
+                        <button id="btnProjStart" onclick="startProjectTimer()" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition">
+                            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                            <span>Projekt-Timer Starten</span>
+                        </button>
+                        <button id="btnProjStop" onclick="stopProjectTimer()" disabled class="flex-1 py-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-30 text-white text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition">
+                            <i data-lucide="square" class="w-4 h-4 fill-current"></i>
+                            <span>Projekt Stoppen</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Heute erfasste Zeiten -->
+                <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6">
+                    <h2 class="text-sm font-bold text-white mb-4">Heute erfasste Einträge</h2>
+                    <div id="entriesList" class="divide-y divide-slate-800">
+                        <p class="text-xs text-slate-500 text-center py-4">Lade Einträge...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: SACHVERRECHNUNG & AUSLAGEN (Neu!) -->
+            <section id="tab-expenses" class="hidden space-y-6">
+                <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6 space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <i data-lucide="receipt" class="w-5 h-5 text-indigo-400"></i>
+                        <h2 class="text-sm font-bold text-white">Auslage / Material mit Überstunden verrechnen</h2>
+                    </div>
+                    <p class="text-xs text-slate-400">Erfasse hier gekaufte Dinge (z. B. Reiniger 18,00 € netto). Der Betrag wird automatisch in Gegen-Stunden umgerechnet und von deinen Überstunden abgezogen.</p>
+
+                    <form onsubmit="addExpense(event)" class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Bezeichnung / Gegenstand</label>
+                            <input type="text" id="expTitle" required placeholder="z. B. Reiniger gekauft" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Netto-Betrag (€)</label>
+                            <input type="number" step="0.01" id="expAmount" required placeholder="18.00" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Stundensatz (€/h)</label>
+                            <input type="number" step="0.01" id="expRate" value="18.00" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Datum</label>
+                            <input type="date" id="expDate" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition">
+                                Verrechnung Buchen
                             </button>
                         </div>
                     </form>
-                </details>
+                </div>
 
-                <!-- Heute erfasste Zeiten -->
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-base font-bold text-slate-900">Heute erfasst</h2>
-                        <span id="todayTotal" class="text-xs font-semibold bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full">0 Std 0 Min</span>
-                    </div>
-                    <div id="entriesList" class="divide-y divide-slate-100">
-                        <p class="text-xs text-slate-400 text-center py-4">Lade Einträge...</p>
+                <!-- Liste aller Verrechnungen -->
+                <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6">
+                    <h2 class="text-sm font-bold text-white mb-4">Gebuchte Sachverrechnungen</h2>
+                    <div id="expensesList" class="divide-y divide-slate-800">
+                        <p class="text-xs text-slate-500 text-center py-4">Lade Verrechnungen...</p>
                     </div>
                 </div>
             </section>
 
-            <!-- TAB 2: AUSWERTUNG & PDF -->
+            <!-- TAB 3: MONATSAUSWERTUNG & PDF -->
             <section id="tab-reports" class="hidden space-y-6">
-                <!-- Filter bar -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
-                    <div class="w-full md:w-auto">
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Monat</label>
-                        <input type="month" id="reportMonth" onchange="loadReports()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium">
+                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Monat auswählen</label>
+                        <input type="month" id="reportMonth" onchange="loadReports()" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
                     </div>
-                    <button onclick="generatePDF()" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl text-sm font-semibold flex items-center justify-center space-x-2 transition shadow-lg shadow-indigo-500/20">
+                    <button onclick="generatePDF()" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition shadow-lg">
                         <i data-lucide="file-down" class="w-4 h-4"></i>
-                        <span>PDF Monatsbericht Herunterladen</span>
+                        <span>Monatsbericht als PDF Generieren</span>
                     </button>
                 </div>
 
-                <!-- Printable Area -->
-                <div id="pdfContent" class="space-y-6 bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200/80">
+                <div id="pdfContent" class="space-y-6 bg-white text-slate-900 p-6 md:p-8 rounded-3xl">
                     <div class="border-b border-slate-200 pb-4 flex justify-between items-end">
                         <div>
-                            <h2 class="text-2xl font-bold text-slate-900">Monatsbericht</h2>
+                            <h2 class="text-2xl font-bold text-slate-900">Monatskonto & Arbeitszeitnachweis</h2>
                             <p id="reportPeriodText" class="text-xs text-slate-500">Monat: --</p>
                         </div>
                         <div class="text-right">
-                            <span class="text-xs text-slate-400 block font-bold uppercase">Gesamtstunden</span>
-                            <span id="reportTotalHours" class="text-3xl font-extrabold text-indigo-600">0.0 h</span>
+                            <span class="text-[10px] text-slate-400 block font-bold uppercase">Soll / Ist Saldo</span>
+                            <span id="reportTotalHours" class="text-2xl font-extrabold text-indigo-600">+0.0 h</span>
                         </div>
                     </div>
 
-                    <!-- Charts Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                            <h3 class="text-xs font-bold text-slate-500 uppercase mb-3 text-center">Projekte</h3>
-                            <div class="h-44 relative">
-                                <canvas id="chartProjects"></canvas>
-                            </div>
+                    <div class="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl text-center">
+                        <div>
+                            <span class="text-[10px] text-slate-400 block font-bold">SOLL (40h/W)</span>
+                            <span id="repSoll" class="text-base font-bold text-slate-800">160 h</span>
                         </div>
-                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                            <h3 class="text-xs font-bold text-slate-500 uppercase mb-3 text-center">Aktivitäten</h3>
-                            <div class="h-44 relative">
-                                <canvas id="chartActivities"></canvas>
-                            </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block font-bold">IST GELEISTET</span>
+                            <span id="repIst" class="text-base font-bold text-emerald-600">0 h</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block font-bold">SACHABZUG</span>
+                            <span id="repDeduct" class="text-base font-bold text-rose-600">-0 h</span>
                         </div>
                     </div>
 
-                    <!-- Detail Table -->
-                    <div class="pt-4">
-                        <h3 class="text-xs font-bold text-slate-500 uppercase mb-3">Detaillierte Liste</h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs text-slate-600">
-                                <thead class="bg-slate-50 text-slate-700 uppercase font-bold border-b border-slate-200">
-                                    <tr>
-                                        <th class="p-3">Datum</th>
-                                        <th class="p-3">Projekt</th>
-                                        <th class="p-3">Aktivität</th>
-                                        <th class="p-3">Beschreibung</th>
-                                        <th class="p-3 text-right">Dauer</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="reportTableBody" class="divide-y divide-slate-100">
-                                    <tr>
-                                        <td colspan="5" class="text-center py-4 text-slate-400">Keine Daten verfügbar</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- TAB 3: SETTINGS / FACE ID REGISTRATION -->
-            <section id="tab-settings" class="hidden space-y-6">
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 space-y-6">
-                    <h2 class="text-base font-bold text-slate-900">Sicherheit & Face ID</h2>
-                    
-                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <div class="flex items-center space-x-3">
-                            <div class="p-3 bg-indigo-100 text-indigo-600 rounded-xl">
-                                <i data-lucide="scan-face" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-semibold text-slate-800">Face ID / Passkey</h3>
-                                <p class="text-xs text-slate-500">Schneller Login ohne Passwort am Handy</p>
-                            </div>
-                        </div>
-                        <button onclick="registerPasskey()" class="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-xl hover:bg-indigo-700 transition">
-                            Aktivieren
-                        </button>
+                    <div class="pt-2">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase mb-3">Detaillierte Zeiteinträge</h3>
+                        <table class="w-full text-left text-xs text-slate-600">
+                            <thead class="bg-slate-100 text-slate-700 uppercase font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-2.5">Datum</th>
+                                    <th class="p-2.5">Projekt / Tätigkeit</th>
+                                    <th class="p-2.5">Notiz</th>
+                                    <th class="p-2.5 text-right">Dauer</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
                     </div>
                 </div>
             </section>
 
         </main>
 
-        <!-- Bottom Navigation Mobile -->
-        <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 px-6 py-2 flex justify-around items-center z-40 md:hidden">
-            <button onclick="switchTab('tracker')" id="nav-tracker" class="flex flex-col items-center text-indigo-600">
+        <!-- Bottom Navigation -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 px-6 py-2.5 flex justify-around items-center z-40 md:hidden">
+            <button onclick="switchTab('tracker')" id="nav-tracker" class="flex flex-col items-center text-indigo-400">
                 <i data-lucide="clock" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">Tracker</span>
+                <span class="text-[10px] font-bold mt-1">Zeiten</span>
             </button>
-            <button onclick="switchTab('reports')" id="nav-reports" class="flex flex-col items-center text-slate-400 hover:text-indigo-600">
+            <button onclick="switchTab('expenses')" id="nav-expenses" class="flex flex-col items-center text-slate-500 hover:text-indigo-400">
+                <i data-lucide="receipt" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold mt-1">Auslagen</span>
+            </button>
+            <button onclick="switchTab('reports')" id="nav-reports" class="flex flex-col items-center text-slate-500 hover:text-indigo-400">
                 <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">Auswertung</span>
-            </button>
-            <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center text-slate-400 hover:text-indigo-600">
-                <i data-lucide="settings" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">Setup</span>
+                <span class="text-[10px] font-bold mt-1">Konto & PDF</span>
             </button>
         </nav>
     </div>
 
-    <!-- Application Script -->
     <script>
         let isSignUp = false;
-        let timerInterval = null;
-        let startTime = null;
-        let chartProjectsInstance = null;
-        let chartActivitiesInstance = null;
+        let workTimerInterval = null, workStartTime = null;
+        let projTimerInterval = null, projStartTime = null;
 
         document.getElementById('reportMonth').value = new Date().toISOString().slice(0, 7);
+        document.getElementById('expDate').value = new Date().toISOString().slice(0, 10);
         lucide.createIcons();
 
-        // Check active session on startup
         supabaseClient.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                showApp(session.user);
-            }
+            if (session) showApp(session.user);
         });
 
-        // Auth Logic
         function toggleAuthMode() {
             isSignUp = !isSignUp;
             document.getElementById('btnSubmitAuth').innerText = isSignUp ? 'Konto Erstellen' : 'Anmelden';
@@ -334,16 +300,13 @@
             e.preventDefault();
             const email = document.getElementById('authEmail').value;
             const password = document.getElementById('authPassword').value;
-            const errorEl = document.getElementById('authError');
-            errorEl.classList.add('hidden');
-
             const { data, error } = isSignUp 
                 ? await supabaseClient.auth.signUp({ email, password })
                 : await supabaseClient.auth.signInWithPassword({ email, password });
 
             if (error) {
-                errorEl.innerText = error.message;
-                errorEl.classList.remove('hidden');
+                document.getElementById('authError').innerText = error.message;
+                document.getElementById('authError').classList.remove('hidden');
             } else if (data.user) {
                 showApp(data.user);
             }
@@ -360,143 +323,162 @@
             document.getElementById('authSection').classList.add('hidden');
             document.getElementById('appSection').classList.remove('hidden');
             loadTodayEntries();
+            loadExpenses();
+            calculateMonthDashboard();
         }
 
-        // Passkey / Face ID WebAuthn API Setup
-        async function registerPasskey() {
-            try {
-                if (!window.PublicKeyCredential) {
-                    alert('Dein Browser unterstützt keine Passkeys / Face ID.');
-                    return;
-                }
-                alert('Face ID / Passkey erfolgreich mit deinem Konto verknüpft!');
-            } catch (err) {
-                alert('Fehler beim Registrieren von Face ID: ' + err.message);
+        // Sachverrechnungen
+        async function addExpense(e) {
+            e.preventDefault();
+            const title = document.getElementById('expTitle').value;
+            const amount = parseFloat(document.getElementById('expAmount').value);
+            const rate = parseFloat(document.getElementById('expRate').value);
+            const date = document.getElementById('expDate').value;
+
+            const deductHours = (amount / rate).toFixed(2);
+
+            const { error } = await supabaseClient.from('expenses').insert([{
+                title, amount_net: amount, hourly_rate: rate, deduct_hours: deductHours, date
+            }]);
+
+            if (error) alert('Fehler: ' + error.message);
+            else {
+                document.getElementById('expTitle').value = '';
+                document.getElementById('expAmount').value = '';
+                loadExpenses();
+                calculateMonthDashboard();
             }
         }
 
-        async function loginWithPasskey() {
-            alert('Bitte melde dich einmalig mit E-Mail/Passwort an, um Face ID zu aktivieren.');
-        }
-
-        // Tab Navigation
-        function switchTab(tab) {
-            ['tracker', 'reports', 'settings'].forEach(t => {
-                document.getElementById(`tab-${t}`).classList.add('hidden');
-                document.getElementById(`nav-${t}`)?.classList.replace('text-indigo-600', 'text-slate-400');
-            });
-
-            document.getElementById(`tab-${tab}`).classList.remove('hidden');
-            document.getElementById(`nav-${tab}`)?.classList.replace('text-slate-400', 'text-indigo-600');
-
-            if (tab === 'reports') loadReports();
-        }
-
-        // Timer Logic
-        function startTimer() {
-            startTime = new Date();
-            document.getElementById('btnStart').disabled = true;
-            document.getElementById('btnStop').disabled = false;
-            
-            timerInterval = setInterval(() => {
-                const diff = Math.floor((new Date() - startTime) / 1000);
-                const hrs = String(Math.floor(diff / 3600)).padStart(2, '0');
-                const mins = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-                const secs = String(diff % 60).padStart(2, '0');
-                document.getElementById('timerDisplay').innerText = `${hrs}:${mins}:${secs}`;
-            }, 1000);
-        }
-
-        async function stopTimer() {
-            if (!startTime) return;
-            clearInterval(timerInterval);
-            const endTime = new Date();
-            const durationMinutes = Math.max(1, Math.round((endTime - startTime) / 1000 / 60));
-
-            const entry = {
-                project: document.getElementById('inputProject').value,
-                activity: document.getElementById('inputActivity').value,
-                description: document.getElementById('inputDescription').value || 'Keine Notiz',
-                start_time: startTime.toISOString(),
-                end_time: endTime.toISOString(),
-                duration_minutes: durationMinutes
-            };
-
-            await saveEntry(entry);
-
-            document.getElementById('timerDisplay').innerText = '00:00:00';
-            document.getElementById('inputDescription').value = '';
-            document.getElementById('btnStart').disabled = false;
-            document.getElementById('btnStop').disabled = true;
-            startTime = null;
-        }
-
-        async function saveEntry(entry) {
-            const { error } = await supabaseClient.from('timesheets').insert([entry]);
-            if (error) alert('Fehler beim Speichern: ' + error.message);
-            else loadTodayEntries();
-        }
-
-        async function saveManualTime(e) {
-            e.preventDefault();
-            const start = new Date(document.getElementById('manualStart').value);
-            const end = new Date(document.getElementById('manualEnd').value);
-
-            if (end <= start) {
-                alert('Endzeit muss nach Startzeit liegen!');
+        async function loadExpenses() {
+            const { data } = await supabaseClient.from('expenses').select('*').order('date', { ascending: false });
+            const list = document.getElementById('expensesList');
+            if (!data || data.length === 0) {
+                list.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">Keine Auslagen gebucht.</p>';
                 return;
             }
+            list.innerHTML = data.map(item => `
+                <div class="py-3 flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-white text-xs">${item.title}</div>
+                        <div class="text-[11px] text-slate-400">${item.amount_net} € netto (Satz: ${item.hourly_rate} €/h)</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-mono text-xs font-bold text-rose-400">-${item.deduct_hours} h Abzug</div>
+                        <div class="text-[10px] text-slate-500">${item.date}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-            const durationMinutes = Math.round((end - start) / 1000 / 60);
+        // Berechnung Soll / Ist
+        async function calculateMonthDashboard() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
 
-            await saveEntry({
-                project: document.getElementById('inputProject').value,
-                activity: document.getElementById('inputActivity').value,
-                description: document.getElementById('inputDescription').value || 'Manuell nachgetragen',
-                start_time: start.toISOString(),
-                end_time: end.toISOString(),
-                duration_minutes: durationMinutes
-            });
+            // Arbeitstage im Monat berechnen (Mo-Fr)
+            let workDays = 0;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayOfWeek = new Date(year, month, d).getDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) workDays++;
+            }
 
-            document.getElementById('manualForm').reset();
+            const sollHours = workDays * 8; // 40 Std/Woche = 8h/Tag
+            document.getElementById('dashSollHours').innerText = `${sollHours}.0 h`;
+
+            // Ist-Zeiten abfragen
+            const startDate = new Date(year, month, 1).toISOString();
+            const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+
+            const { data: times } = await supabaseClient.from('timesheets').select('duration_minutes').gte('start_time', startDate).lte('start_time', endDate);
+            let totalMins = (times || []).reduce((acc, curr) => acc + curr.duration_minutes, 0);
+            const istHours = (totalMins / 60).toFixed(1);
+
+            document.getElementById('dashIstHours').innerText = `${istHours} h`;
+
+            // Auslagen-Abzüge abfragen
+            const { data: exps } = await supabaseClient.from('expenses').select('deduct_hours').gte('date', `${year}-${String(month+1).padStart(2,'0')}-01`);
+            let deductHours = (exps || []).reduce((acc, curr) => acc + parseFloat(curr.deduct_hours), 0);
+
+            const diff = (istHours - sollHours - deductHours).toFixed(1);
+            document.getElementById('dashWorkDiff').innerText = `${diff >= 0 ? '+' : ''}${diff} h Saldo`;
+            document.getElementById('dashOvertimeTotal').innerText = `${diff >= 0 ? '+' : ''}${diff} h`;
+        }
+
+        // Timer Functions
+        function toggleWorkTimer() {
+            if (!workStartTime) {
+                workStartTime = new Date();
+                document.getElementById('btnWorkStartText').innerText = 'Arbeitet...';
+                document.getElementById('btnWorkStop').disabled = false;
+                workTimerInterval = setInterval(() => {
+                    const diff = Math.floor((new Date() - workStartTime) / 1000);
+                    document.getElementById('workTimerDisplay').innerText = formatSeconds(diff);
+                }, 1000);
+            }
+        }
+
+        async function stopWorkTimer() {
+            if (!workStartTime) return;
+            clearInterval(workTimerInterval);
+            const endTime = new Date();
+            const duration = Math.max(1, Math.round((endTime - workStartTime) / 1000 / 60));
+
+            await supabaseClient.from('timesheets').insert([{
+                project: 'Arbeitszeit', activity: 'Hauptschicht', description: 'Arbeitstag',
+                start_time: workStartTime.toISOString(), end_time: endTime.toISOString(), duration_minutes: duration
+            }]);
+
+            workStartTime = null;
+            document.getElementById('workTimerDisplay').innerText = '00:00:00';
+            document.getElementById('btnWorkStartText').innerText = 'Arbeitsbeginn';
+            document.getElementById('btnWorkStop').disabled = true;
+            loadTodayEntries();
+            calculateMonthDashboard();
+        }
+
+        function formatSeconds(sec) {
+            const hrs = String(Math.floor(sec / 3600)).padStart(2, '0');
+            const mins = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+            const secs = String(sec % 60).padStart(2, '0');
+            return `${hrs}:${mins}:${secs}`;
         }
 
         async function loadTodayEntries() {
             const todayStart = new Date();
             todayStart.setHours(0, 0, 0, 0);
 
-            const { data, error } = await supabaseClient
-                .from('timesheets')
-                .select('*')
-                .gte('start_time', todayStart.toISOString())
-                .order('start_time', { ascending: false });
-
-            const listEl = document.getElementById('entriesList');
-            if (error || !data || data.length === 0) {
-                listEl.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Heute noch keine Zeiten erfasst.</p>';
-                document.getElementById('todayTotal').innerText = '0 Std 0 Min';
+            const { data } = await supabaseClient.from('timesheets').select('*').gte('start_time', todayStart.toISOString()).order('start_time', { ascending: false });
+            const list = document.getElementById('entriesList');
+            if (!data || data.length === 0) {
+                list.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">Heute noch keine Zeiten erfasst.</p>';
                 return;
             }
-
-            let totalMins = 0;
-            listEl.innerHTML = data.map(item => {
-                totalMins += item.duration_minutes;
-                const timeStr = new Date(item.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                return `
-                    <div class="py-3 flex justify-between items-center">
-                        <div>
-                            <div class="font-bold text-slate-800 text-xs">${item.project} <span class="text-indigo-600 font-normal">(${item.activity})</span></div>
-                            <div class="text-[11px] text-slate-500">${item.description}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-mono text-xs font-bold text-slate-700">${item.duration_minutes} Min</div>
-                            <div class="text-[10px] text-slate-400">${timeStr}</div>
-                        </div>
+            list.innerHTML = data.map(item => `
+                <div class="py-3 flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-white text-xs">${item.project} <span class="text-indigo-400 font-normal">(${item.activity})</span></div>
+                        <div class="text-[11px] text-slate-400">${item.description}</div>
                     </div>
-                `;
-            }).join('');
+                    <div class="text-right">
+                        <div class="font-mono text-xs font-bold text-slate-200">${item.duration_minutes} Min</div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-            document.getElementById('todayTotal').innerText = `${Math.floor(totalMins / 60)} Std ${totalMins % 60} Min`;
+        function switchTab(tab) {
+            ['tracker', 'expenses', 'reports'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`nav-${t}`)?.classList.replace('text-indigo-400', 'text-slate-500');
+            });
+
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`nav-${tab}`)?.classList.replace('text-slate-500', 'text-indigo-400');
+
+            if (tab === 'reports') loadReports();
         }
 
         async function loadReports() {
@@ -509,77 +491,29 @@
 
             document.getElementById('reportPeriodText').innerText = `Monat: ${month}/${year}`;
 
-            const { data, error } = await supabaseClient
-                .from('timesheets')
-                .select('*')
-                .gte('start_time', startDate)
-                .lte('start_time', endDate)
-                .order('start_time', { ascending: true });
-
+            const { data } = await supabaseClient.from('timesheets').select('*').gte('start_time', startDate).lte('start_time', endDate);
             const tableBody = document.getElementById('reportTableBody');
 
-            if (error || !data || data.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400">Keine Daten vorhanden</td></tr>';
-                document.getElementById('reportTotalHours').innerText = '0.0 h';
-                renderCharts({}, {});
+            if (!data || data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-slate-400">Keine Einträge für diesen Monat</td></tr>';
                 return;
             }
 
-            let totalMinutes = 0;
-            const projectTotals = {};
-            const activityTotals = {};
-
+            let totalMins = 0;
             tableBody.innerHTML = data.map(item => {
-                totalMinutes += item.duration_minutes;
-                projectTotals[item.project] = (projectTotals[item.project] || 0) + item.duration_minutes;
-                activityTotals[item.activity] = (activityTotals[item.activity] || 0) + item.duration_minutes;
-
+                totalMins += item.duration_minutes;
                 return `
                     <tr class="hover:bg-slate-50">
-                        <td class="p-3 font-mono">${new Date(item.start_time).toLocaleDateString('de-DE')}</td>
-                        <td class="p-3 font-bold text-slate-800">${item.project}</td>
-                        <td class="p-3 text-indigo-600 font-semibold">${item.activity}</td>
-                        <td class="p-3 text-slate-500">${item.description}</td>
-                        <td class="p-3 text-right font-mono font-bold">${(item.duration_minutes / 60).toFixed(1)} h</td>
+                        <td class="p-2.5 font-mono">${new Date(item.start_time).toLocaleDateString('de-DE')}</td>
+                        <td class="p-2.5 font-bold text-slate-800">${item.project} (${item.activity})</td>
+                        <td class="p-2.5 text-slate-500">${item.description}</td>
+                        <td class="p-2.5 text-right font-mono font-bold">${(item.duration_minutes / 60).toFixed(1)} h</td>
                     </tr>
                 `;
             }).join('');
 
-            document.getElementById('reportTotalHours').innerText = `${(totalMinutes / 60).toFixed(1)} h`;
-            renderCharts(projectTotals, activityTotals);
-        }
-
-        function renderCharts(projectData, activityData) {
-            const ctxProjects = document.getElementById('chartProjects').getContext('2d');
-            const ctxActivities = document.getElementById('chartActivities').getContext('2d');
-
-            if (chartProjectsInstance) chartProjectsInstance.destroy();
-            if (chartActivitiesInstance) chartActivitiesInstance.destroy();
-
-            chartProjectsInstance = new Chart(ctxProjects, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(projectData),
-                    datasets: [{
-                        data: Object.values(projectData).map(m => (m / 60).toFixed(1)),
-                        backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6']
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-
-            chartActivitiesInstance = new Chart(ctxActivities, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(activityData),
-                    datasets: [{
-                        label: 'Stunden',
-                        data: Object.values(activityData).map(m => (m / 60).toFixed(1)),
-                        backgroundColor: '#6366f1'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
+            const istH = (totalMins / 60).toFixed(1);
+            document.getElementById('repIst').innerText = `${istH} h`;
         }
 
         function generatePDF() {
@@ -587,7 +521,7 @@
             const monthStr = document.getElementById('reportMonth').value;
             html2pdf().set({
                 margin: [10, 10, 10, 10],
-                filename: `Zeiterfassung_Bericht_${monthStr}.pdf`,
+                filename: `Zeiterfassung_Konto_${monthStr}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
