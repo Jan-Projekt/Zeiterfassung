@@ -81,7 +81,7 @@
                     </div>
                 </div>
 
-                <!-- DESKTOP NAVIGATION (sichtbar ab mittleren Bildschirmen md:) -->
+                <!-- DESKTOP NAVIGATION -->
                 <nav class="hidden md:flex items-center space-x-1 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800">
                     <button onclick="switchTab('tracker')" id="desk-nav-tracker" class="px-4 py-2 rounded-xl text-xs font-bold text-indigo-400 bg-indigo-950/50 flex items-center space-x-2 transition">
                         <i data-lucide="clock" class="w-4 h-4"></i>
@@ -115,21 +115,26 @@
 
             <!-- OVERTIME & VACATION DASHBOARD CARDS -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <!-- HERVORGEHOBENES FELD FÜR GESAMTES ÜBERSTUNDEN-GUTHABEN -->
+                <div class="col-span-2 md:col-span-2 bg-gradient-to-br from-indigo-900/60 via-slate-900 to-slate-900 rounded-3xl border border-indigo-500/30 p-5 shadow-xl relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wider text-indigo-400 mb-1">Gesamt Überstunden-Guthaben</div>
+                            <div id="dashOvertimeTotal" class="text-3xl font-extrabold text-white tracking-tight">+0.0 h</div>
+                        </div>
+                        <div class="p-3 bg-indigo-600/20 text-indigo-400 rounded-2xl">
+                            <i data-lucide="wallet" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div id="dashWorkDiff" class="text-[11px] text-emerald-400 font-semibold mt-2">Kumuliert inkl. Vortrag & Sachabzug</div>
+                </div>
+
                 <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4">
-                    <div class="text-[10px] font-bold uppercase text-slate-400 mb-1">Soll (Monat)</div>
-                    <div id="dashSollHours" class="text-xl font-bold text-slate-200">176.0 h</div>
-                    <span class="text-[9px] text-slate-500">40 Std. / Woche</span>
+                    <div class="text-[10px] font-bold uppercase text-slate-400 mb-1">Soll / Ist (Monat)</div>
+                    <div id="dashSollHours" class="text-sm font-bold text-slate-300">Soll: 176.0 h</div>
+                    <div id="dashIstHours" class="text-base font-bold text-emerald-400">Ist: 0.0 h</div>
                 </div>
-                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4">
-                    <div class="text-[10px] font-bold uppercase text-slate-400 mb-1">Ist (Inkl. Urlaub)</div>
-                    <div id="dashIstHours" class="text-xl font-bold text-emerald-400">0.0 h</div>
-                    <span id="dashWorkDiff" class="text-[9px] text-emerald-500 font-semibold">+0.0 h Saldo</span>
-                </div>
-                <div class="bg-slate-900 rounded-2xl border border-indigo-900/50 p-4 bg-gradient-to-br from-indigo-950/30 to-slate-900">
-                    <div class="text-[10px] font-bold uppercase text-indigo-400 mb-1">Überstunden</div>
-                    <div id="dashOvertimeTotal" class="text-xl font-bold text-indigo-300">+0.0 h</div>
-                    <span class="text-[9px] text-slate-400">Inkl. Sachabzug</span>
-                </div>
+
                 <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4">
                     <div class="text-[10px] font-bold uppercase text-amber-400 mb-1">Resturlaub</div>
                     <div id="dashVacationDays" class="text-xl font-bold text-amber-300">20 Tage</div>
@@ -137,55 +142,30 @@
                 </div>
             </div>
 
-            <!-- TAB 1: TRACKER & TAGESERFASSUNG -->
+            <!-- TAB 1: TRACKER & TAGESERFASSUNG (KOMMEN / GEHEN / PAUSE) -->
             <section id="tab-tracker" class="space-y-6">
-                <!-- Live Work Timer -->
-                <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6 shadow-xl">
+                <!-- Kommen / Gehen / Pause Timer -->
+                <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6 md:p-8 text-center shadow-xl relative overflow-hidden">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-xs font-bold uppercase text-indigo-400 tracking-wider">Haupt-Arbeitszeit</span>
-                        <span id="workStateBadge" class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Bereit</span>
+                        <span class="text-xs font-bold uppercase text-indigo-400 tracking-wider">Arbeitszeit (Heute)</span>
+                        <span id="workStateBadge" class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Abgemeldet</span>
                     </div>
-                    <div id="workTimerDisplay" class="text-4xl font-mono font-bold text-white my-2">00:00:00</div>
-                    <div class="flex space-x-3 mt-4">
-                        <button id="btnWorkStart" onclick="toggleWorkTimer()" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition">
-                            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-                            <span id="btnWorkStartText">Arbeitsbeginn</span>
-                        </button>
-                        <button id="btnWorkStop" onclick="stopWorkTimer()" disabled class="flex-1 py-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-30 text-white text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition">
-                            <i data-lucide="square" class="w-4 h-4 fill-current"></i>
-                            <span>Feierabend</span>
-                        </button>
-                    </div>
-                </div>
 
-                <!-- Projekt- & Aufgaben-Timer -->
-                <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6 space-y-4">
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-bold uppercase text-indigo-400">Projekt / Leistung zuordnen</span>
-                        <span id="projectTimerDisplay" class="text-2xl font-mono font-bold text-white">00:00:00</span>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Projekt</label>
-                            <input type="text" id="inputProject" placeholder="z. B. Kunde A / Projekt X" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tätigkeit</label>
-                            <input type="text" id="inputActivity" placeholder="z. B. Besprechung, Entwicklung" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Notiz</label>
-                            <input type="text" id="inputDescription" placeholder="Kurze Beschreibung" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
-                        </div>
-                    </div>
-                    <div class="flex space-x-3 pt-2">
-                        <button id="btnProjStart" onclick="startProjectTimer()" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition">
+                    <div id="workTimerDisplay" class="text-5xl font-mono font-bold text-white my-4">00:00:00</div>
+                    <div id="pauseTimerDisplay" class="text-xs font-mono text-amber-400 mb-6 hidden">Pause läuft: 00:00:00</div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <button id="btnWorkStart" onclick="startWorkTimer()" class="py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl flex items-center justify-center space-x-2 transition shadow-lg shadow-emerald-600/20 active:scale-95">
                             <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-                            <span>Projekt-Timer Starten</span>
+                            <span>Kommen (Start)</span>
                         </button>
-                        <button id="btnProjStop" onclick="stopProjectTimer()" disabled class="flex-1 py-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-30 text-white text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition">
+                        <button id="btnWorkPause" onclick="togglePause()" disabled class="py-3.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-30 text-white text-xs font-bold rounded-2xl flex items-center justify-center space-x-2 transition shadow-lg shadow-amber-600/20 active:scale-95">
+                            <i data-lucide="pause" class="w-4 h-4 fill-current"></i>
+                            <span id="btnWorkPauseText">Pause Buchen</span>
+                        </button>
+                        <button id="btnWorkStop" onclick="stopWorkTimer()" disabled class="py-3.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-30 text-white text-xs font-bold rounded-2xl flex items-center justify-center space-x-2 transition shadow-lg shadow-rose-600/20 active:scale-95">
                             <i data-lucide="square" class="w-4 h-4 fill-current"></i>
-                            <span>Projekt Stoppen</span>
+                            <span>Gehen (Feierabend)</span>
                         </button>
                     </div>
                 </div>
@@ -246,7 +226,6 @@
                         <i data-lucide="palmtree" class="w-5 h-5 text-amber-400"></i>
                         <h2 class="text-sm font-bold text-white">Urlaub eintragen (+ 8 Std./Tag Gutschrift)</h2>
                     </div>
-                    <p class="text-xs text-slate-400">Für jeden Urlaubs-Arbeitstag werden dir automatisch 8,0 Stunden Arbeitszeit gutgeschrieben.</p>
                     <form onsubmit="addVacation(event)" class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
                         <div>
                             <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Von Datum</label>
@@ -307,7 +286,7 @@
                             <span id="repSoll" class="text-base font-bold text-slate-800">176 h</span>
                         </div>
                         <div>
-                            <span class="text-[10px] text-slate-400 block font-bold">IST (INKL. URLAUB)</span>
+                            <span class="text-[10px] text-slate-400 block font-bold">IST GELEISTET</span>
                             <span id="repIst" class="text-base font-bold text-emerald-600">0 h</span>
                         </div>
                         <div>
@@ -322,7 +301,7 @@
                             <thead class="bg-slate-100 text-slate-700 uppercase font-bold border-b border-slate-200">
                                 <tr>
                                     <th class="p-2.5">Datum</th>
-                                    <th class="p-2.5">Projekt / Tätigkeit</th>
+                                    <th class="p-2.5">Aktivität</th>
                                     <th class="p-2.5">Notiz</th>
                                     <th class="p-2.5 text-right">Dauer</th>
                                 </tr>
@@ -354,7 +333,7 @@
 
         </main>
 
-        <!-- MOBILE NAVIGATION (nur auf Smartphones sichtbar) -->
+        <!-- MOBILE NAVIGATION -->
         <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 px-4 py-2.5 flex justify-around items-center z-40 md:hidden">
             <button onclick="switchTab('tracker')" id="nav-tracker" class="flex flex-col items-center text-indigo-400">
                 <i data-lucide="clock" class="w-5 h-5"></i>
@@ -377,8 +356,10 @@
 
     <script>
         let isSignUp = false;
-        let workTimerInterval = null, workStartTime = null;
-        let projTimerInterval = null, projStartTime = null;
+        let workTimerInterval = null, pauseTimerInterval = null;
+        let workStartTime = null, pauseStartTime = null;
+        let accumulatedPauseSeconds = 0;
+        let isPaused = false;
 
         document.getElementById('reportMonth').value = new Date().toISOString().slice(0, 7);
         document.getElementById('expDate').value = new Date().toISOString().slice(0, 10);
@@ -398,18 +379,130 @@
             calculateMonthDashboard();
         }
 
-        // Tab-Wechsel-Logik für Mobile UND PC/Desktop
-        function switchTab(tab) {
-            const tabs = ['tracker', 'expenses', 'vacation', 'reports', 'settings'];
+        // TIMER KOMMEN / GEHEN / PAUSE
+        function startWorkTimer() {
+            if (!workStartTime) {
+                workStartTime = new Date();
+                document.getElementById('btnWorkStart').disabled = true;
+                document.getElementById('btnWorkPause').disabled = false;
+                document.getElementById('btnWorkStop').disabled = false;
+                
+                document.getElementById('workStateBadge').innerText = 'Arbeitet';
+                document.getElementById('workStateBadge').className = 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/50';
+
+                workTimerInterval = setInterval(() => {
+                    if (!isPaused) {
+                        const totalSec = Math.floor((new Date() - workStartTime) / 1000) - accumulatedPauseSeconds;
+                        document.getElementById('workTimerDisplay').innerText = formatSeconds(totalSec);
+                    }
+                }, 1000);
+            }
+        }
+
+        function togglePause() {
+            if (!isPaused) {
+                isPaused = true;
+                pauseStartTime = new Date();
+                document.getElementById('btnWorkPauseText').innerText = 'Pause Beenden';
+                document.getElementById('pauseTimerDisplay').classList.remove('hidden');
+                document.getElementById('workStateBadge').innerText = 'In Pause';
+                document.getElementById('workStateBadge').className = 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-950 text-amber-400 border border-amber-800/50';
+
+                pauseTimerInterval = setInterval(() => {
+                    const pauseSec = Math.floor((new Date() - pauseStartTime) / 1000);
+                    document.getElementById('pauseTimerDisplay').innerText = `Pause läuft: ${formatSeconds(pauseSec)}`;
+                }, 1000);
+            } else {
+                isPaused = false;
+                clearInterval(pauseTimerInterval);
+                accumulatedPauseSeconds += Math.floor((new Date() - pauseStartTime) / 1000);
+                document.getElementById('btnWorkPauseText').innerText = 'Pause Buchen';
+                document.getElementById('pauseTimerDisplay').classList.add('hidden');
+                document.getElementById('workStateBadge').innerText = 'Arbeitet';
+                document.getElementById('workStateBadge').className = 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/50';
+            }
+        }
+
+        async function stopWorkTimer() {
+            if (!workStartTime) return;
+            clearInterval(workTimerInterval);
+            if (pauseTimerInterval) clearInterval(pauseTimerInterval);
+
+            const endTime = new Date();
+            let totalSeconds = Math.floor((endTime - workStartTime) / 1000) - accumulatedPauseSeconds;
+            const durationMinutes = Math.max(1, Math.round(totalSeconds / 60));
+
+            await supabaseClient.from('timesheets').insert([{
+                project: 'Arbeitszeit',
+                activity: 'Arbeitstag',
+                description: `Geleistet: ${Math.floor(durationMinutes/60)}h ${durationMinutes%60}m (Pause: ${Math.round(accumulatedPauseSeconds/60)}m)`,
+                start_time: workStartTime.toISOString(),
+                end_time: endTime.toISOString(),
+                duration_minutes: durationMinutes
+            }]);
+
+            workStartTime = null;
+            accumulatedPauseSeconds = 0;
+            isPaused = false;
+
+            document.getElementById('workTimerDisplay').innerText = '00:00:00';
+            document.getElementById('pauseTimerDisplay').classList.add('hidden');
+            document.getElementById('btnWorkStart').disabled = false;
+            document.getElementById('btnWorkPause').disabled = true;
+            document.getElementById('btnWorkStop').disabled = true;
+            document.getElementById('btnWorkPauseText').innerText = 'Pause Buchen';
+            document.getElementById('workStateBadge').innerText = 'Abgemeldet';
+            document.getElementById('workStateBadge').className = 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400';
+
+            loadTodayEntries();
+            calculateMonthDashboard();
+        }
+
+        // BERECHNUNG DES KUMULIERTEN ÜBERSTUNDEN-GUTHABENS
+        async function calculateMonthDashboard() {
+            // 1. Alle Zeiten abfragen (Inkl. Vorträge & Importe)
+            const { data: times } = await supabaseClient.from('timesheets').select('start_time, duration_minutes');
+            let totalWorkedMins = (times || []).reduce((acc, curr) => acc + curr.duration_minutes, 0);
+            const totalWorkedHours = totalWorkedMins / 60;
+
+            // 2. Alle Abzüge abfragen (Auslagen, S. Weddemar Pauschalen etc.)
+            const { data: exps } = await supabaseClient.from('expenses').select('deduct_hours');
+            let totalDeductHours = (exps || []).reduce((acc, curr) => acc + parseFloat(curr.deduct_hours), 0);
+
+            // 3. Soll-Stunden für 2026 berechnen (Jan-Sep bis heute)
+            // Monatliche Soll-Zeiten aus deiner Excel (Jan=0, Feb=160, März=176, Apr=176, Mai=168, Jun=176, Jul=184, Aug=168, Sep=176)
+            const monthlySoll = [0, 160, 176, 176, 168, 176, 184, 168, 176];
+            const currentMonthIdx = new Date().getMonth(); // Sep = 8
             
-            tabs.forEach(t => {
+            let accumulatedSoll = 0;
+            for (let i = 0; i <= currentMonthIdx; i++) {
+                accumulatedSoll += monthlySoll[i];
+            }
+
+            // 4. Exakter Endstand
+            const overtimeTotal = (totalWorkedHours - accumulatedSoll - totalDeductHours).toFixed(2);
+
+            // UI Aktualisieren
+            document.getElementById('dashOvertimeTotal').innerText = `${overtimeTotal >= 0 ? '+' : ''}${overtimeTotal} h`;
+            
+            // Aktueller Monat
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const startDate = new Date(year, month, 1).toISOString();
+            const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+
+            const monthTimes = (times || []).filter(t => t.start_time >= startDate && t.start_time <= endDate);
+            let monthMins = monthTimes.reduce((acc, curr) => acc + curr.duration_minutes, 0);
+
+            document.getElementById('dashSollHours').innerText = `Soll: ${monthlySoll[currentMonthIdx]}.0 h`;
+            document.getElementById('dashIstHours').innerText = `Ist: ${(monthMins / 60).toFixed(1)} h`;
+        }
+
+        function switchTab(tab) {
+            ['tracker', 'expenses', 'vacation', 'reports', 'settings'].forEach(t => {
                 document.getElementById(`tab-${t}`).classList.add('hidden');
-                
-                // Mobile
-                const mobBtn = document.getElementById(`nav-${t}`);
-                if (mobBtn) mobBtn.classList.replace('text-indigo-400', 'text-slate-500');
-                
-                // Desktop
+                document.getElementById(`nav-${t}`)?.classList.replace('text-indigo-400', 'text-slate-500');
                 const deskBtn = document.getElementById(`desk-nav-${t}`);
                 if (deskBtn) {
                     deskBtn.classList.remove('text-indigo-400', 'bg-indigo-950/50');
@@ -417,14 +510,8 @@
                 }
             });
 
-            // Aktiven Tab anzeigen
             document.getElementById(`tab-${tab}`).classList.remove('hidden');
-            
-            // Mobile aktiv stylen
-            const activeMob = document.getElementById(`nav-${tab}`);
-            if (activeMob) activeMob.classList.replace('text-slate-500', 'text-indigo-400');
-            
-            // Desktop aktiv stylen
+            document.getElementById(`nav-${tab}`)?.classList.replace('text-slate-500', 'text-indigo-400');
             const activeDesk = document.getElementById(`desk-nav-${tab}`);
             if (activeDesk) {
                 activeDesk.classList.remove('text-slate-400');
@@ -434,16 +521,13 @@
             if (tab === 'reports') loadReports();
         }
 
-        // Automatisches Berechnen der Arbeitstage für den Urlaub
         function calculateVacationDays() {
             const startStr = document.getElementById('vacStart').value;
             const endStr = document.getElementById('vacEnd').value;
             if (!startStr || !endStr) return;
-
             let count = 0;
             let cur = new Date(startStr);
             const last = new Date(endStr);
-
             while (cur <= last) {
                 const day = cur.getDay();
                 if (day !== 0 && day !== 6) count++;
@@ -452,40 +536,29 @@
             document.getElementById('vacDays').value = count;
         }
 
-        // Urlaub Buchen + 8 Stunden pro Tag als Ist-Zeit buchen
         async function addVacation(e) {
             e.preventDefault();
             const startStr = document.getElementById('vacStart').value;
             const endStr = document.getElementById('vacEnd').value;
             const days = parseFloat(document.getElementById('vacDays').value);
 
-            await supabaseClient.from('absences').insert([{
-                type: 'Urlaub', start_date: startStr, end_date: endStr, days: days
-            }]);
+            await supabaseClient.from('absences').insert([{ type: 'Urlaub', start_date: startStr, end_date: endStr, days: days }]);
 
             let cur = new Date(startStr);
             const last = new Date(endStr);
             const entries = [];
-
             while (cur <= last) {
                 const day = cur.getDay();
                 if (day !== 0 && day !== 6) {
                     const isoDate = cur.toISOString().slice(0, 10);
                     entries.push({
-                        project: 'Urlaub',
-                        activity: 'Urlaubstag',
-                        description: 'Automatische Gutschrift 8,0 Std.',
-                        start_time: `${isoDate}T08:00:00+02:00`,
-                        end_time: `${isoDate}T16:00:00+02:00`,
-                        duration_minutes: 480
+                        project: 'Urlaub', activity: 'Urlaubstag', description: 'Automatische Gutschrift 8,0 Std.',
+                        start_time: `${isoDate}T08:00:00+02:00`, end_time: `${isoDate}T16:00:00+02:00`, duration_minutes: 480
                     });
                 }
                 cur.setDate(cur.getDate() + 1);
             }
-
-            if (entries.length > 0) {
-                await supabaseClient.from('timesheets').insert(entries);
-            }
+            if (entries.length > 0) await supabaseClient.from('timesheets').insert(entries);
 
             loadVacation();
             calculateMonthDashboard();
@@ -509,13 +582,10 @@
                             <div class="font-bold text-white text-xs">${item.start_date} bis ${item.end_date}</div>
                             <div class="text-[11px] text-slate-400">${item.type}</div>
                         </div>
-                        <div class="text-right font-mono text-xs font-bold text-amber-400">
-                            ${item.days} Tage (${item.days * 8}h)
-                        </div>
+                        <div class="text-right font-mono text-xs font-bold text-amber-400">${item.days} Tage (${item.days * 8}h)</div>
                     </div>
                 `;
             }).join('');
-
             document.getElementById('dashVacationDays').innerText = `${30 - takenDays} Tage`;
         }
 
@@ -546,10 +616,7 @@
             const rate = parseFloat(document.getElementById('expRate').value);
             const date = document.getElementById('expDate').value;
 
-            await supabaseClient.from('expenses').insert([{
-                title, amount_net: amount, hourly_rate: rate, deduct_hours: (amount / rate).toFixed(2), date
-            }]);
-
+            await supabaseClient.from('expenses').insert([{ title, amount_net: amount, hourly_rate: rate, deduct_hours: (amount / rate).toFixed(2), date }]);
             loadExpenses();
             calculateMonthDashboard();
         }
@@ -564,108 +631,9 @@
                         <div class="font-bold text-white text-xs">${item.title}</div>
                         <div class="text-[11px] text-slate-400">${item.amount_net} € netto (${item.hourly_rate} €/h)</div>
                     </div>
-                    <div class="text-right font-mono text-xs font-bold text-rose-400">
-                        -${item.deduct_hours} h
-                    </div>
+                    <div class="text-right font-mono text-xs font-bold text-rose-400">-${item.deduct_hours} h</div>
                 </div>
             `).join('');
-        }
-
-        async function calculateMonthDashboard() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-
-            let workDays = 0;
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            for (let d = 1; d <= daysInMonth; d++) {
-                const dayOfWeek = new Date(year, month, d).getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) workDays++;
-            }
-
-            const sollHours = workDays * 8;
-            document.getElementById('dashSollHours').innerText = `${sollHours}.0 h`;
-
-            const startDate = new Date(year, month, 1).toISOString();
-            const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
-
-            const { data: times } = await supabaseClient.from('timesheets').select('duration_minutes').gte('start_time', startDate).lte('start_time', endDate);
-            let totalMins = (times || []).reduce((acc, curr) => acc + curr.duration_minutes, 0);
-            const istHours = (totalMins / 60).toFixed(1);
-
-            document.getElementById('dashIstHours').innerText = `${istHours} h`;
-
-            const { data: exps } = await supabaseClient.from('expenses').select('deduct_hours').gte('date', `${year}-${String(month+1).padStart(2,'0')}-01`);
-            let deductHours = (exps || []).reduce((acc, curr) => acc + parseFloat(curr.deduct_hours), 0);
-
-            const diff = (istHours - sollHours - deductHours).toFixed(1);
-            document.getElementById('dashWorkDiff').innerText = `${diff >= 0 ? '+' : ''}${diff} h Saldo`;
-            document.getElementById('dashOvertimeTotal').innerText = `${diff >= 0 ? '+' : ''}${diff} h`;
-        }
-
-        function toggleWorkTimer() {
-            if (!workStartTime) {
-                workStartTime = new Date();
-                document.getElementById('btnWorkStartText').innerText = 'Arbeitet...';
-                document.getElementById('btnWorkStop').disabled = false;
-                workTimerInterval = setInterval(() => {
-                    const diff = Math.floor((new Date() - workStartTime) / 1000);
-                    document.getElementById('workTimerDisplay').innerText = formatSeconds(diff);
-                }, 1000);
-            }
-        }
-
-        async function stopWorkTimer() {
-            if (!workStartTime) return;
-            clearInterval(workTimerInterval);
-            const endTime = new Date();
-            const duration = Math.max(1, Math.round((endTime - workStartTime) / 1000 / 60));
-
-            await supabaseClient.from('timesheets').insert([{
-                project: 'Arbeitszeit', activity: 'Hauptschicht', description: 'Arbeitstag',
-                start_time: workStartTime.toISOString(), end_time: endTime.toISOString(), duration_minutes: duration
-            }]);
-
-            workStartTime = null;
-            document.getElementById('workTimerDisplay').innerText = '00:00:00';
-            document.getElementById('btnWorkStartText').innerText = 'Arbeitsbeginn';
-            document.getElementById('btnWorkStop').disabled = true;
-            loadTodayEntries();
-            calculateMonthDashboard();
-        }
-
-        function startProjectTimer() {
-            projStartTime = new Date();
-            document.getElementById('btnProjStart').disabled = true;
-            document.getElementById('btnProjStop').disabled = false;
-            projTimerInterval = setInterval(() => {
-                const diff = Math.floor((new Date() - projStartTime) / 1000);
-                document.getElementById('projectTimerDisplay').innerText = formatSeconds(diff);
-            }, 1000);
-        }
-
-        async function stopProjectTimer() {
-            if (!projStartTime) return;
-            clearInterval(projTimerInterval);
-            const endTime = new Date();
-            const duration = Math.max(1, Math.round((endTime - projStartTime) / 1000 / 60));
-
-            await supabaseClient.from('timesheets').insert([{
-                project: document.getElementById('inputProject').value || 'Projekt',
-                activity: document.getElementById('inputActivity').value || 'Aktivität',
-                description: document.getElementById('inputDescription').value || 'Projekt-Zeit',
-                start_time: projStartTime.toISOString(),
-                end_time: endTime.toISOString(),
-                duration_minutes: duration
-            }]);
-
-            projStartTime = null;
-            document.getElementById('projectTimerDisplay').innerText = '00:00:00';
-            document.getElementById('inputDescription').value = '';
-            document.getElementById('btnProjStart').disabled = false;
-            document.getElementById('btnProjStop').disabled = true;
-            loadTodayEntries();
-            calculateMonthDashboard();
         }
 
         function formatSeconds(sec) {
@@ -685,12 +653,10 @@
             list.innerHTML = data.map(item => `
                 <div class="py-3 flex justify-between items-center">
                     <div>
-                        <div class="font-bold text-white text-xs">${item.project} <span class="text-indigo-400 font-normal">(${item.activity})</span></div>
+                        <div class="font-bold text-white text-xs">${item.project}</div>
                         <div class="text-[11px] text-slate-400">${item.description}</div>
                     </div>
-                    <div class="text-right font-mono text-xs font-bold text-slate-200">
-                        ${item.duration_minutes} Min
-                    </div>
+                    <div class="text-right font-mono text-xs font-bold text-slate-200">${item.duration_minutes} Min</div>
                 </div>
             `).join('');
         }
@@ -698,7 +664,6 @@
         async function loadReports() {
             const monthStr = document.getElementById('reportMonth').value;
             if (!monthStr) return;
-
             const [year, month] = monthStr.split('-');
             const startDate = new Date(year, month - 1, 1).toISOString();
             const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
@@ -707,7 +672,6 @@
 
             const { data } = await supabaseClient.from('timesheets').select('*').gte('start_time', startDate).lte('start_time', endDate);
             const tableBody = document.getElementById('reportTableBody');
-
             if (!data) return;
             let totalMins = 0;
             tableBody.innerHTML = data.map(item => {
@@ -715,13 +679,12 @@
                 return `
                     <tr class="hover:bg-slate-50">
                         <td class="p-2.5 font-mono">${new Date(item.start_time).toLocaleDateString('de-DE')}</td>
-                        <td class="p-2.5 font-bold text-slate-800">${item.project} (${item.activity})</td>
+                        <td class="p-2.5 font-bold text-slate-800">${item.project}</td>
                         <td class="p-2.5 text-slate-500">${item.description}</td>
                         <td class="p-2.5 text-right font-mono font-bold">${(item.duration_minutes / 60).toFixed(1)} h</td>
                     </tr>
                 `;
             }).join('');
-
             document.getElementById('repIst').innerText = `${(totalMins / 60).toFixed(1)} h`;
         }
 
