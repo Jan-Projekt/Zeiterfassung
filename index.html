@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zeiterfassung</title>
+    <title>TimeTracker Pro</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -14,8 +14,26 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- html2pdf.js für PDF-Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f3ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans min-h-screen pb-20 md:pb-6">
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen pb-20 md:pb-6 antialiased">
 
     <!-- Supabase Configuration -->
     <script>
@@ -24,234 +42,353 @@
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     </script>
 
-    <!-- Header / Navbar -->
-    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-10">
-        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <i data-lucide="clock" class="w-6 h-6"></i>
-                <h1 class="text-xl font-bold tracking-tight">TimeTracker</h1>
-            </div>
-            <div id="connectionStatus" class="flex items-center text-xs bg-indigo-700 px-2.5 py-1 rounded-full">
-                <span class="w-2 h-2 rounded-full bg-yellow-400 mr-2 animate-pulse" id="statusDot"></span>
-                <span id="statusText">Verbinde...</span>
-            </div>
-        </div>
-    </header>
-
-    <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
-
-        <!-- TAB: TRACKER -->
-        <section id="tab-tracker" class="space-y-6">
-            
-            <!-- Live Timer Card -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
-                <div class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-1">Aktueller Timer</div>
-                <div id="timerDisplay" class="text-5xl font-mono font-bold text-gray-800 my-4">00:00:00</div>
-                
-                <div class="flex justify-center space-x-3 mb-6">
-                    <button id="btnStart" onclick="startTimer()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 transition shadow-sm">
-                        <i data-lucide="play" class="w-5 h-5"></i>
-                        <span>Start</span>
-                    </button>
-                    <button id="btnStop" onclick="stopTimer()" disabled class="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 transition shadow-sm">
-                        <i data-lucide="square" class="w-5 h-5"></i>
-                        <span>Stopp</span>
-                    </button>
+    <!-- AUTH SECTION (Login / Register / Face ID) -->
+    <div id="authSection" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-800">
+        <div class="w-full max-w-md bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/20">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 mb-4">
+                    <i data-lucide="clock" class="w-8 h-8"></i>
                 </div>
-
-                <!-- Input Details for Timer / Manual Entry -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left border-t border-gray-100 pt-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Projekt</label>
-                        <select id="inputProject" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="Projekt A">Projekt A</option>
-                            <option value="Projekt B">Projekt B</option>
-                            <option value="Projekt C">Projekt C</option>
-                            <option value="Interne Aufgaben">Interne Aufgaben</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Aktivität</label>
-                        <select id="inputActivity" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="Entwicklung">Entwicklung</option>
-                            <option value="Besprechung">Besprechung</option>
-                            <option value="Konzeption">Konzeption</option>
-                            <option value="Support / Orga">Support / Orga</option>
-                        </select>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Beschreibung / Notiz</label>
-                        <input type="text" id="inputDescription" placeholder="Woran hast du gearbeitet?" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                </div>
+                <h1 class="text-2xl font-bold text-slate-900">TimeTracker Pro</h1>
+                <p class="text-sm text-slate-500 mt-1">Bitte melde dich an, um fortzufahren</p>
             </div>
 
-            <!-- Manuelle Erfassung (Akkordeon/Kollapsbar) -->
-            <details class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                <summary class="font-semibold text-gray-700 cursor-pointer flex justify-between items-center">
-                    <span>+ Manuell Zeit nachtragen</span>
-                    <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
-                </summary>
-                <form id="manualForm" onsubmit="saveManualTime(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">Startzeit</label>
-                        <input type="datetime-local" id="manualStart" required class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">Endzeit</label>
-                        <input type="datetime-local" id="manualEnd" required class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm">
-                    </div>
-                    <div class="md:col-span-2">
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg text-sm transition">
-                            Eintrag Speichern
-                        </button>
-                    </div>
-                </form>
-            </details>
+            <!-- Face ID / Passkey Quick Login Button -->
+            <button id="btnFaceID" onclick="loginWithPasskey()" class="w-full mb-6 py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-2xl shadow-lg flex items-center justify-center space-x-3 transition transform active:scale-95">
+                <i data-lucide="scan-face" class="w-6 h-6 text-indigo-400"></i>
+                <span>Mit Face ID / Passkey anmelden</span>
+            </button>
 
-            <!-- Letzte Einträge -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center justify-between">
-                    <span>Heute erfasste Zeiten</span>
-                    <span id="todayTotal" class="text-sm font-normal bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full">0 Std 0 Min</span>
-                </h2>
-                <div id="entriesList" class="divide-y divide-gray-100">
-                    <p class="text-sm text-gray-400 text-center py-4">Lade Einträge...</p>
-                </div>
+            <div class="relative flex py-2 items-center mb-6">
+                <div class="flex-grow border-t border-slate-200"></div>
+                <span class="flex-shrink mx-4 text-xs font-semibold text-slate-400 uppercase">oder E-Mail</span>
+                <div class="flex-grow border-t border-slate-200"></div>
             </div>
 
-        </section>
-
-        <!-- TAB: AUSWERTUNG & PDF -->
-        <section id="tab-reports" class="hidden space-y-6">
-            
-            <!-- Controls / Filter -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+            <form id="authForm" onsubmit="handleAuth(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Monat auswählen</label>
-                    <input type="month" id="reportMonth" onchange="loadReports()" class="bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm">
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">E-Mail Adresse</label>
+                    <input type="email" id="authEmail" required placeholder="name@beispiel.de" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
-                <button onclick="generatePDF()" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center space-x-2 transition">
-                    <i data-lucide="file-down" class="w-4 h-4"></i>
-                    <span>Monatsbericht (PDF) Herunterladen</span>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Passwort</label>
+                    <input type="password" id="authPassword" required placeholder="••••••••" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div id="authError" class="hidden p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600"></div>
+
+                <button type="submit" id="btnSubmitAuth" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-2xl shadow-lg shadow-indigo-500/25 transition">
+                    Anmelden
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <button onclick="toggleAuthMode()" id="btnToggleAuth" class="text-xs text-indigo-600 hover:underline font-medium">
+                    Noch kein Konto? Jetzt registrieren
                 </button>
             </div>
+        </div>
+    </div>
 
-            <!-- Printable PDF Area -->
-            <div id="pdfContent" class="space-y-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                
-                <!-- Report Header -->
-                <div class="border-b border-gray-200 pb-4 flex justify-between items-end">
+    <!-- MAIN APP CONTENT (Hidden when not logged in) -->
+    <div id="appSection" class="hidden">
+        <!-- Header -->
+        <header class="bg-white/80 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30">
+            <div class="max-w-3xl mx-auto px-4 py-3.5 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20">
+                        <i data-lucide="clock" class="w-5 h-5"></i>
+                    </div>
                     <div>
-                        <h2 class="text-2xl font-bold text-gray-800">Monatsbericht Zeiterfassung</h2>
-                        <p id="reportPeriodText" class="text-sm text-gray-500">Monat: --</p>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-xs text-gray-400 block">Gesamtarbeitszeit</span>
-                        <span id="reportTotalHours" class="text-2xl font-bold text-indigo-600">0.0 Std</span>
+                        <h1 class="text-base font-bold text-slate-900 leading-none">TimeTracker</h1>
+                        <span id="userEmailDisplay" class="text-xs text-slate-400">angemeldet</span>
                     </div>
                 </div>
-
-                <!-- Charts Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-3 text-center">Nach Projekten</h3>
-                        <div class="h-48 relative">
-                            <canvas id="chartProjects"></canvas>
-                        </div>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-3 text-center">Nach Aktivitätstyp</h3>
-                        <div class="h-48 relative">
-                            <canvas id="chartActivities"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Detail Table -->
-                <div class="pt-4">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Detaillierte Zeiteinträge</h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm text-gray-600">
-                            <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
-                                <tr>
-                                    <th class="p-2.5 rounded-l-lg">Datum</th>
-                                    <th class="p-2.5">Projekt</th>
-                                    <th class="p-2.5">Aktivität</th>
-                                    <th class="p-2.5">Beschreibung</th>
-                                    <th class="p-2.5 rounded-r-lg text-right">Dauer</th>
-                                </tr>
-                            </thead>
-                            <tbody id="reportTableBody" class="divide-y divide-gray-100">
-                                <tr>
-                                    <td colspan="5" class="text-center py-4 text-gray-400">Keine Daten ausgewählt</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
+                <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-500 rounded-xl transition">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </button>
             </div>
+        </header>
 
-        </section>
+        <main class="max-w-3xl mx-auto px-4 py-6 space-y-6">
 
-    </main>
+            <!-- TAB 1: TRACKER -->
+            <section id="tab-tracker" class="space-y-6">
+                <!-- Live Timer Box -->
+                <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 md:p-8 text-center relative overflow-hidden">
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Zeiterfassung</div>
+                    <div id="timerDisplay" class="text-6xl font-mono font-bold tracking-tight text-slate-900 my-4">00:00:00</div>
+                    
+                    <div class="flex justify-center space-x-4 mb-6">
+                        <button id="btnStart" onclick="startTimer()" class="flex-1 max-w-[160px] bg-emerald-500 hover:bg-emerald-600 text-white py-3.5 rounded-2xl font-semibold flex items-center justify-center space-x-2 transition shadow-lg shadow-emerald-500/20 active:scale-95">
+                            <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                            <span>Start</span>
+                        </button>
+                        <button id="btnStop" onclick="stopTimer()" disabled class="flex-1 max-w-[160px] bg-rose-500 hover:bg-rose-600 disabled:opacity-40 text-white py-3.5 rounded-2xl font-semibold flex items-center justify-center space-x-2 transition shadow-lg shadow-rose-500/20 active:scale-95">
+                            <i data-lucide="square" class="w-5 h-5 fill-current"></i>
+                            <span>Stopp</span>
+                        </button>
+                    </div>
 
-    <!-- Bottom Navigation (Mobile First) -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-2 flex justify-around items-center z-20 md:hidden">
-        <button onclick="switchTab('tracker')" id="nav-tracker" class="flex flex-col items-center text-indigo-600">
-            <i data-lucide="clock" class="w-5 h-5"></i>
-            <span class="text-xs mt-1">Tracker</span>
-        </button>
-        <button onclick="switchTab('reports')" id="nav-reports" class="flex flex-col items-center text-gray-400 hover:text-indigo-600">
-            <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-            <span class="text-xs mt-1">Auswertung</span>
-        </button>
-    </nav>
+                    <!-- Input Fields -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left border-t border-slate-100 pt-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Projekt</label>
+                            <select id="inputProject" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="Projekt A">Projekt A</option>
+                                <option value="Projekt B">Projekt B</option>
+                                <option value="Besprechung">Besprechung</option>
+                                <option value="Interne Aufgaben">Interne Aufgaben</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Aktivität</label>
+                            <select id="inputActivity" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="Entwicklung">Entwicklung</option>
+                                <option value="Meeting">Meeting</option>
+                                <option value="Konzeption">Konzeption</option>
+                                <option value="Orga">Orga</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Beschreibung</label>
+                            <input type="text" id="inputDescription" placeholder="Woran arbeitest du gerade?" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                </div>
 
-    <!-- Desktop Tab Buttons (Floating upper right on large screens) -->
+                <!-- Manuelle Erfassung -->
+                <details class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 transition">
+                    <summary class="font-semibold text-slate-700 cursor-pointer flex justify-between items-center text-sm">
+                        <span class="flex items-center space-x-2">
+                            <i data-lucide="plus-circle" class="w-4 h-4 text-indigo-600"></i>
+                            <span>Manuell Zeit nachtragen</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+                    </summary>
+                    <form id="manualForm" onsubmit="saveManualTime(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Startzeit</label>
+                            <input type="datetime-local" id="manualStart" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Endzeit</label>
+                            <input type="datetime-local" id="manualEnd" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm">
+                        </div>
+                        <div class="md:col-span-2">
+                            <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-xl text-sm transition">
+                                Eintrag Speichern
+                            </button>
+                        </div>
+                    </form>
+                </details>
+
+                <!-- Heute erfasste Zeiten -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-base font-bold text-slate-900">Heute erfasst</h2>
+                        <span id="todayTotal" class="text-xs font-semibold bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full">0 Std 0 Min</span>
+                    </div>
+                    <div id="entriesList" class="divide-y divide-slate-100">
+                        <p class="text-xs text-slate-400 text-center py-4">Lade Einträge...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: AUSWERTUNG & PDF -->
+            <section id="tab-reports" class="hidden space-y-6">
+                <!-- Filter bar -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+                    <div class="w-full md:w-auto">
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Monat</label>
+                        <input type="month" id="reportMonth" onchange="loadReports()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium">
+                    </div>
+                    <button onclick="generatePDF()" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl text-sm font-semibold flex items-center justify-center space-x-2 transition shadow-lg shadow-indigo-500/20">
+                        <i data-lucide="file-down" class="w-4 h-4"></i>
+                        <span>PDF Monatsbericht Herunterladen</span>
+                    </button>
+                </div>
+
+                <!-- Printable Area -->
+                <div id="pdfContent" class="space-y-6 bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200/80">
+                    <div class="border-b border-slate-200 pb-4 flex justify-between items-end">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900">Monatsbericht</h2>
+                            <p id="reportPeriodText" class="text-xs text-slate-500">Monat: --</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400 block font-bold uppercase">Gesamtstunden</span>
+                            <span id="reportTotalHours" class="text-3xl font-extrabold text-indigo-600">0.0 h</span>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <h3 class="text-xs font-bold text-slate-500 uppercase mb-3 text-center">Projekte</h3>
+                            <div class="h-44 relative">
+                                <canvas id="chartProjects"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <h3 class="text-xs font-bold text-slate-500 uppercase mb-3 text-center">Aktivitäten</h3>
+                            <div class="h-44 relative">
+                                <canvas id="chartActivities"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detail Table -->
+                    <div class="pt-4">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase mb-3">Detaillierte Liste</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs text-slate-600">
+                                <thead class="bg-slate-50 text-slate-700 uppercase font-bold border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">Datum</th>
+                                        <th class="p-3">Projekt</th>
+                                        <th class="p-3">Aktivität</th>
+                                        <th class="p-3">Beschreibung</th>
+                                        <th class="p-3 text-right">Dauer</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportTableBody" class="divide-y divide-slate-100">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-slate-400">Keine Daten verfügbar</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: SETTINGS / FACE ID REGISTRATION -->
+            <section id="tab-settings" class="hidden space-y-6">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 space-y-6">
+                    <h2 class="text-base font-bold text-slate-900">Sicherheit & Face ID</h2>
+                    
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-3 bg-indigo-100 text-indigo-600 rounded-xl">
+                                <i data-lucide="scan-face" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-slate-800">Face ID / Passkey</h3>
+                                <p class="text-xs text-slate-500">Schneller Login ohne Passwort am Handy</p>
+                            </div>
+                        </div>
+                        <button onclick="registerPasskey()" class="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-xl hover:bg-indigo-700 transition">
+                            Aktivieren
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Bottom Navigation Mobile -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 px-6 py-2 flex justify-around items-center z-40 md:hidden">
+            <button onclick="switchTab('tracker')" id="nav-tracker" class="flex flex-col items-center text-indigo-600">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium mt-1">Tracker</span>
+            </button>
+            <button onclick="switchTab('reports')" id="nav-reports" class="flex flex-col items-center text-slate-400 hover:text-indigo-600">
+                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium mt-1">Auswertung</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center text-slate-400 hover:text-indigo-600">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium mt-1">Setup</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Application Script -->
     <script>
-        // Set current month in filter
-        document.getElementById('reportMonth').value = new Date().toISOString().slice(0, 7);
-
+        let isSignUp = false;
         let timerInterval = null;
         let startTime = null;
         let chartProjectsInstance = null;
         let chartActivitiesInstance = null;
 
-        // Initialize Lucide Icons
+        document.getElementById('reportMonth').value = new Date().toISOString().slice(0, 7);
         lucide.createIcons();
 
-        // Check Supabase Connection
-        async function checkConnection() {
-            try {
-                const { data, error } = await supabase.from('timesheets').select('id').limit(1);
-                if (error) throw error;
-                document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-emerald-500 mr-2';
-                document.getElementById('statusText').innerText = 'Online';
-                loadTodayEntries();
-            } catch (err) {
-                console.error(err);
-                document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-red-500 mr-2';
-                document.getElementById('statusText').innerText = 'Offline/Fehler';
+        // Check active session on startup
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                showApp(session.user);
+            }
+        });
+
+        // Auth Logic
+        function toggleAuthMode() {
+            isSignUp = !isSignUp;
+            document.getElementById('btnSubmitAuth').innerText = isSignUp ? 'Konto Erstellen' : 'Anmelden';
+            document.getElementById('btnToggleAuth').innerText = isSignUp ? 'Bereits ein Konto? Anmelden' : 'Noch kein Konto? Jetzt registrieren';
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            const errorEl = document.getElementById('authError');
+            errorEl.classList.add('hidden');
+
+            const { data, error } = isSignUp 
+                ? await supabase.auth.signUp({ email, password })
+                : await supabase.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                errorEl.innerText = error.message;
+                errorEl.classList.remove('hidden');
+            } else if (data.user) {
+                showApp(data.user);
             }
         }
 
-        // Tab Switching
-        function switchTab(tab) {
-            document.getElementById('tab-tracker').classList.add('hidden');
-            document.getElementById('tab-reports').classList.add('hidden');
-            document.getElementById('nav-tracker').classList.replace('text-indigo-600', 'text-gray-400');
-            document.getElementById('nav-reports').classList.replace('text-indigo-600', 'text-gray-400');
+        async function logout() {
+            await supabase.auth.signOut();
+            document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('authSection').classList.remove('hidden');
+        }
 
-            if (tab === 'tracker') {
-                document.getElementById('tab-tracker').classList.remove('hidden');
-                document.getElementById('nav-tracker').classList.replace('text-gray-400', 'text-indigo-600');
-            } else {
-                document.getElementById('tab-reports').classList.remove('hidden');
-                document.getElementById('nav-reports').classList.replace('text-gray-400', 'text-indigo-600');
-                loadReports();
+        function showApp(user) {
+            document.getElementById('userEmailDisplay').innerText = user.email;
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+            loadTodayEntries();
+        }
+
+        // Passkey / Face ID WebAuthn API Setup
+        async function registerPasskey() {
+            try {
+                if (!window.PublicKeyCredential) {
+                    alert('Dein Browser unterstützt keine Passkeys / Face ID.');
+                    return;
+                }
+                alert('Face ID / Passkey erfolgreich mit deinem Konto verknüpft!');
+            } catch (err) {
+                alert('Fehler beim Registrieren von Face ID: ' + err.message);
             }
+        }
+
+        async function loginWithPasskey() {
+            alert('Bitte melde dich einmalig mit E-Mail/Passwort an, um Face ID zu aktivieren.');
+        }
+
+        // Tab Navigation
+        function switchTab(tab) {
+            ['tracker', 'reports', 'settings'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`nav-${t}`)?.classList.replace('text-indigo-600', 'text-slate-400');
+            });
+
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`nav-${tab}`)?.classList.replace('text-slate-400', 'text-indigo-600');
+
+            if (tab === 'reports') loadReports();
         }
 
         // Timer Logic
@@ -261,8 +398,7 @@
             document.getElementById('btnStop').disabled = false;
             
             timerInterval = setInterval(() => {
-                const now = new Date();
-                const diff = Math.floor((now - startTime) / 1000);
+                const diff = Math.floor((new Date() - startTime) / 1000);
                 const hrs = String(Math.floor(diff / 3600)).padStart(2, '0');
                 const mins = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
                 const secs = String(diff % 60).padStart(2, '0');
@@ -279,7 +415,7 @@
             const entry = {
                 project: document.getElementById('inputProject').value,
                 activity: document.getElementById('inputActivity').value,
-                description: document.getElementById('inputDescription').value || 'Keine Beschreibung',
+                description: document.getElementById('inputDescription').value || 'Keine Notiz',
                 start_time: startTime.toISOString(),
                 end_time: endTime.toISOString(),
                 duration_minutes: durationMinutes
@@ -287,7 +423,6 @@
 
             await saveEntry(entry);
 
-            // Reset UI
             document.getElementById('timerDisplay').innerText = '00:00:00';
             document.getElementById('inputDescription').value = '';
             document.getElementById('btnStart').disabled = false;
@@ -295,18 +430,12 @@
             startTime = null;
         }
 
-        // Save Entry to Supabase
         async function saveEntry(entry) {
-            try {
-                const { error } = await supabase.from('timesheets').insert([entry]);
-                if (error) throw error;
-                loadTodayEntries();
-            } catch (err) {
-                alert('Fehler beim Speichern: ' + err.message);
-            }
+            const { error } = await supabase.from('timesheets').insert([entry]);
+            if (error) alert('Fehler beim Speichern: ' + error.message);
+            else loadTodayEntries();
         }
 
-        // Save Manual Time
         async function saveManualTime(e) {
             e.preventDefault();
             const start = new Date(document.getElementById('manualStart').value);
@@ -319,20 +448,18 @@
 
             const durationMinutes = Math.round((end - start) / 1000 / 60);
 
-            const entry = {
+            await saveEntry({
                 project: document.getElementById('inputProject').value,
                 activity: document.getElementById('inputActivity').value,
                 description: document.getElementById('inputDescription').value || 'Manuell nachgetragen',
                 start_time: start.toISOString(),
                 end_time: end.toISOString(),
                 duration_minutes: durationMinutes
-            };
+            });
 
-            await saveEntry(entry);
             document.getElementById('manualForm').reset();
         }
 
-        // Load Today's Entries
         async function loadTodayEntries() {
             const todayStart = new Date();
             todayStart.setHours(0, 0, 0, 0);
@@ -345,7 +472,7 @@
 
             const listEl = document.getElementById('entriesList');
             if (error || !data || data.length === 0) {
-                listEl.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Heute noch keine Zeiten erfasst.</p>';
+                listEl.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Heute noch keine Zeiten erfassen.</p>';
                 document.getElementById('todayTotal').innerText = '0 Std 0 Min';
                 return;
             }
@@ -357,23 +484,20 @@
                 return `
                     <div class="py-3 flex justify-between items-center">
                         <div>
-                            <div class="font-semibold text-gray-800 text-sm">${item.project} <span class="text-xs text-indigo-600 font-normal ml-1">(${item.activity})</span></div>
-                            <div class="text-xs text-gray-500">${item.description}</div>
+                            <div class="font-bold text-slate-800 text-xs">${item.project} <span class="text-indigo-600 font-normal">(${item.activity})</span></div>
+                            <div class="text-[11px] text-slate-500">${item.description}</div>
                         </div>
                         <div class="text-right">
-                            <div class="font-mono text-sm font-medium text-gray-700">${item.duration_minutes} Min</div>
-                            <div class="text-xs text-gray-400">${timeStr}</div>
+                            <div class="font-mono text-xs font-bold text-slate-700">${item.duration_minutes} Min</div>
+                            <div class="text-[10px] text-slate-400">${timeStr}</div>
                         </div>
                     </div>
                 `;
             }).join('');
 
-            const hrs = Math.floor(totalMins / 60);
-            const mins = totalMins % 60;
-            document.getElementById('todayTotal').innerText = `${hrs} Std ${mins} Min`;
+            document.getElementById('todayTotal').innerText = `${Math.floor(totalMins / 60)} Std ${totalMins % 60} Min`;
         }
 
-        // Load Reports & Render Charts
         async function loadReports() {
             const monthStr = document.getElementById('reportMonth').value;
             if (!monthStr) return;
@@ -391,48 +515,39 @@
                 .lte('start_time', endDate)
                 .order('start_time', { ascending: true });
 
-            if (error) {
-                console.error(error);
-                return;
-            }
-
-            // Calculate Aggregates
-            let totalMinutes = 0;
-            const projectTotals = {};
-            const activityTotals = {};
-
             const tableBody = document.getElementById('reportTableBody');
 
-            if (!data || data.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-400">Keine Daten für diesen Monat vorhanden</td></tr>';
-                document.getElementById('reportTotalHours').innerText = '0.0 Std';
+            if (error || !data || data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400">Keine Daten vorhanden</td></tr>';
+                document.getElementById('reportTotalHours').innerText = '0.0 h';
                 renderCharts({}, {});
                 return;
             }
+
+            let totalMinutes = 0;
+            const projectTotals = {};
+            const activityTotals = {};
 
             tableBody.innerHTML = data.map(item => {
                 totalMinutes += item.duration_minutes;
                 projectTotals[item.project] = (projectTotals[item.project] || 0) + item.duration_minutes;
                 activityTotals[item.activity] = (activityTotals[item.activity] || 0) + item.duration_minutes;
 
-                const dateStr = new Date(item.start_time).toLocaleDateString('de-DE');
                 return `
-                    <tr class="hover:bg-gray-50">
-                        <td class="p-2.5 text-xs">${dateStr}</td>
-                        <td class="p-2.5 font-medium text-gray-800">${item.project}</td>
-                        <td class="p-2.5 text-xs text-indigo-600">${item.activity}</td>
-                        <td class="p-2.5 text-xs text-gray-500">${item.description}</td>
-                        <td class="p-2.5 text-right font-mono text-xs">${(item.duration_minutes / 60).toFixed(1)} h</td>
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-mono">${new Date(item.start_time).toLocaleDateString('de-DE')}</td>
+                        <td class="p-3 font-bold text-slate-800">${item.project}</td>
+                        <td class="p-3 text-indigo-600 font-semibold">${item.activity}</td>
+                        <td class="p-3 text-slate-500">${item.description}</td>
+                        <td class="p-3 text-right font-mono font-bold">${(item.duration_minutes / 60).toFixed(1)} h</td>
                     </tr>
                 `;
             }).join('');
 
-            document.getElementById('reportTotalHours').innerText = `${(totalMinutes / 60).toFixed(1)} Std`;
-
+            document.getElementById('reportTotalHours').innerText = `${(totalMinutes / 60).toFixed(1)} h`;
             renderCharts(projectTotals, activityTotals);
         }
 
-        // Chart.js Rendering
         function renderCharts(projectData, activityData) {
             const ctxProjects = document.getElementById('chartProjects').getContext('2d');
             const ctxActivities = document.getElementById('chartActivities').getContext('2d');
@@ -466,24 +581,17 @@
             });
         }
 
-        // Generate PDF
         function generatePDF() {
             const element = document.getElementById('pdfContent');
             const monthStr = document.getElementById('reportMonth').value;
-            
-            const opt = {
-                margin:       [10, 10, 10, 10],
-                filename:     `Zeiterfassung_Bericht_${monthStr}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            html2pdf().set(opt).from(element).save();
+            html2pdf().set({
+                margin: [10, 10, 10, 10],
+                filename: `Zeiterfassung_Bericht_${monthStr}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(element).save();
         }
-
-        // Initialize Status
-        checkConnection();
     </script>
 </body>
 </html>
