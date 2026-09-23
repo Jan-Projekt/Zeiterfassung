@@ -217,7 +217,7 @@
           <tbody id="mo-table-body"></tbody>
         </table>
       </div>
-      <p class="footnote">"Saldo Ende" wird fortlaufend aus dem Vormonat berechnet: Saldo = Saldo Vormonat + Überstd. − Ausbezahlt − Umwandlung − Verrechnung (Anschaffungen des Monats). Die "Verrechnung" wird automatisch aus dem Reiter "Verrechnung" anhand des dort angegebenen Monats zugeordnet. Der laufende Monat ist mit "Live" markiert: Ist/Überstd./Saldo rechnen sich bei jedem Laden aus deinen bisherigen Tageseinträgen neu, ganz ohne dass du etwas speichern musst. Zukünftige Monate ohne Tageseinträge bleiben als Planwert stehen.</p>
+      <p class="footnote">"Saldo Ende" wird fortlaufend aus dem Vormonat berechnet: Saldo = Saldo Vormonat + Überstd. − Ausbezahlt − Umwandlung − Verrechnung (Anschaffungen des Monats). Die "Verrechnung" wird automatisch aus dem Reiter "Verrechnung" anhand des dort angegebenen Monats zugeordnet. Der laufende Monat und zukünftige Monate bleiben als Planwert stehen, bis der jeweilige Monat abgeschlossen ist — erst dann (ab dem 1. des Folgemonats, automatisch) wird er mit dem echten Ist-Wert aus der Tageserfassung ersetzt.</p>
     </div>
   </section>
 
@@ -445,21 +445,11 @@ function computeMonthlyBalances(){
     const mk = purchaseMonthKey(p);
     purchasesByMonth[mk] = (purchasesByMonth[mk]||0) + (Number(p.hours)||0);
   });
-  const curMonthKeyStr = isoDate(new Date()).slice(0,7);
   let prevBalance = null;
   state.monthlyOverview.forEach((row,i)=>{
     row._overtime = Number(row.ist_hours) - Number(row.soll_hours);
-    row._isLive = false;
-    // Laufender Monat: solange er noch als Planwert markiert ist, wird Ist/Überstd. live aus
-    // den bereits erfassten Tagen hochgerechnet, statt auf den (Monatsabschluss zu warten).
-    if(row.month.slice(0,7) === curMonthKeyStr && row.is_projected){
-      const liveEntries = state.timeEntries.filter(e=>monthKey(e.entry_date)===curMonthKeyStr);
-      if(liveEntries.length){
-        row._liveIst = liveEntries.reduce((s,e)=>s+dailyIst(e),0);
-        row._overtime = row._liveIst - Number(row.soll_hours);
-        row._isLive = true;
-      }
-    }
+    // Laufender Monat und Zukunft bleiben bewusst auf dem Planwert stehen, bis der Monat
+    // abgeschlossen ist (autoFinalizeMonths übernimmt das automatisch ab dem 1. des Folgemonats).
     row._purchaseHours = purchasesByMonth[row.month.slice(0,7)] || 0;
     let base;
     if(i===0){ base = Number(row.overtime_balance_end); }
@@ -744,9 +734,9 @@ function renderUeberstunden(){
   const tbody = document.getElementById('mo-table-body');
   tbody.innerHTML = state.monthlyOverview.length ? state.monthlyOverview.map(r=>`
     <tr>
-      <td data-label="Monat">${MONTH_NAMES[new Date(r.month).getMonth()]} ${new Date(r.month).getFullYear()}${r._isLive?' <span class="badge U">Live</span>':(r.is_projected?' <span class="badge F">Plan</span>':'')}</td>
+      <td data-label="Monat">${MONTH_NAMES[new Date(r.month).getMonth()]} ${new Date(r.month).getFullYear()}${r.is_projected?' <span class="badge F">Plan</span>':''}</td>
       <td data-label="Soll">${fmtNum(r.soll_hours,1)}</td>
-      <td data-label="Ist">${fmtNum(r._isLive?r._liveIst:r.ist_hours,1)}</td>
+      <td data-label="Ist">${fmtNum(r.ist_hours,1)}</td>
       <td data-label="Überstd." class="${r._overtime>=0?'pos':'neg'}">${r._overtime>=0?'+':''}${fmtNum(r._overtime,1)}</td>
       <td data-label="Ausbezahlt">${fmtNum(r.paid_out_hours,1)}</td>
       <td data-label="Umwandlung">${fmtNum(r.vacation_conversion_hours,1)}</td>
