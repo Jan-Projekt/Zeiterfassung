@@ -247,15 +247,20 @@ function timeDiffHours(start,end){
 function dailySoll(entry){
   if(entry.soll_override !== null && entry.soll_override !== undefined) return Number(entry.soll_override);
   const wd = isWeekday(entry.entry_date);
-  if(['U','UU','F','K'].includes(entry.code)) return 0;
+  // Urlaub wird immer mit dem vollen Tages-Soll gutgeschrieben (neutral), auch wenn nichts gearbeitet wurde
+  if(entry.code === 'U') return wd ? 8 : 0;
+  if(['UU','F','K'].includes(entry.code)) return 0;
   if(['SA','SU'].includes(entry.code)) return wd ? Math.max(0, 8 - (Number(entry.absence_hours)||0)) : 0;
   return wd ? 8 : 0;
 }
 function dailyIst(entry){
+  let worked = 0;
   if(entry.start_time && entry.end_time){
-    return Math.max(0, timeDiffHours(entry.start_time.slice(0,5), entry.end_time.slice(0,5)) - (Number(entry.break_minutes)||0)/60);
+    worked = Math.max(0, timeDiffHours(entry.start_time.slice(0,5), entry.end_time.slice(0,5)) - (Number(entry.break_minutes)||0)/60);
   }
-  return 0;
+  // Urlaubstag: die 8 Std. Gutschrift stehen immer, zusätzlich gearbeitete Zeit zählt obendrauf als Überstunden
+  if(entry.code === 'U') return dailySoll(entry) + worked;
+  return worked;
 }
 function monthKey(dateStr){ return dateStr.slice(0,7); }
 
