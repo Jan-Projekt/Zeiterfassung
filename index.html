@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zeiterfassung</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#ffffff; --text:#1c2128; --muted:#6b7280;
+    --border:#e5e7eb; --accent:#2563eb; --accent-dark:#1d4ed8;
+    --green:#16a34a; --red:#dc2626; --amber:#d97706;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  #auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .auth-card{background:var(--card);border-radius:var(--radius);padding:32px;width:100%;max-width:380px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .auth-card h1{font-size:20px;margin:0 0 4px;}
+  .auth-card p.sub{color:var(--muted);font-size:14px;margin:0 0 24px;}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px;margin-top:14px;}
+  input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:#fff;color:var(--text);}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent);}
+  button{cursor:pointer;font-size:14px;border-radius:8px;border:1px solid var(--border);background:#fff;padding:9px 14px;color:var(--text);}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  button.primary:hover{background:var(--accent-dark);}
+  button.danger{color:var(--red);border-color:#fca5a5;}
+  button.ghost{border-color:transparent;background:transparent;color:var(--muted);}
+  button:disabled{opacity:.5;cursor:default;}
+  #auth-error{color:var(--red);font-size:13px;margin-top:10px;min-height:16px;}
+  #app{display:none;max-width:1100px;margin:0 auto;padding:20px 16px 60px;}
+  header.topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;}
+  header.topbar h1{font-size:18px;margin:0;}
+  .chip{background:var(--card);border:1px solid var(--border);border-radius:999px;padding:6px 14px;font-size:13px;display:inline-flex;gap:6px;align-items:center;}
+  .chip b{font-variant-numeric:tabular-nums;}
+  nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap;}
+  nav.tabs button{border:none;background:none;padding:10px 14px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;border-radius:0;}
+  nav.tabs button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  .stat-card .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+  .stat-card .value{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .stat-card .sub{font-size:12px;color:var(--muted);margin-top:4px;}
+  .pos{color:var(--green);} .neg{color:var(--red);}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px;}
+  .card h2{font-size:15px;margin:0 0 14px;}
+  .row-flex{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
+  tr.today{background:#eff6ff;}
+  td input,td select{padding:6px 8px;font-size:13px;}
+  .table-wrap{overflow-x:auto;}
+  .actions-cell{display:flex;gap:4px;white-space:nowrap;}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+  .form-grid .full{grid-column:1/-1;}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;}
+  .modal{background:#fff;border-radius:var(--radius);padding:22px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
+  .modal h3{margin:0 0 16px;font-size:16px;}
+  .modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
+  .badge.U{background:#dbeafe;color:#1e40af;}
+  .badge.UU{background:#e0e7ff;color:#3730a3;}
+  .badge.K{background:#fee2e2;color:#991b1b;}
+  .badge.F{background:#fef3c7;color:#92400e;}
+  .badge.SA,.badge.SU{background:#f3e8ff;color:#6b21a8;}
+  .empty{color:var(--muted);font-size:13px;padding:20px 0;text-align:center;}
+  .month-nav{display:flex;align-items:center;gap:10px;}
+  .month-nav b{min-width:140px;text-align:center;}
+  .footnote{font-size:12px;color:var(--muted);margin-top:8px;}
+  @media (max-width:640px){
+    th,td{padding:6px 5px;font-size:12px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="auth-screen">
+  <div class="auth-card">
+    <h1>Zeiterfassung</h1>
+    <p class="sub">Anmeldung erforderlich</p>
+    <label>E-Mail</label>
+    <input type="email" id="login-email" autocomplete="username">
+    <label>Passwort</label>
+    <input type="password" id="login-password" autocomplete="current-password">
+    <button class="primary" id="login-btn" style="width:100%;margin-top:20px;">Anmelden</button>
+    <div id="auth-error"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header class="topbar">
+    <h1>Zeiterfassung</h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="chip" id="balance-chip">Überstunden: <b>–</b></span>
+      <button class="ghost" id="logout-btn">Abmelden</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="dashboard" class="active">Dashboard</button>
+    <button data-tab="zeiterfassung">Zeiterfassung</button>
+    <button data-tab="ueberstunden">Überstundenkonto</button>
+    <button data-tab="verrechnung">Verrechnung</button>
+    <button data-tab="urlaub">Urlaub</button>
+  </nav>
+
+  <!-- DASHBOARD -->
+  <section class="tab-panel active" id="tab-dashboard">
+    <div class="grid" id="dashboard-stats"></div>
+    <div class="card">
+      <h2>Letzte Buchungen</h2>
+      <div class="table-wrap"><table id="dashboard-recent"><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ZEITERFASSUNG -->
+  <section class="tab-panel" id="tab-zeiterfassung">
+    <div class="card">
+      <div class="row-flex">
+        <div class="month-nav">
+          <button id="ze-prev">←</button>
+          <b id="ze-month-label"></b>
+          <button id="ze-next">→</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button id="ze-today">Heute buchen</button>
+          <button class="primary" id="ze-add">+ Eintrag</button>
+        </div>
+      </div>
+      <div class="row-flex" style="margin-bottom:6px;">
+        <div style="font-size:13px;color:var(--muted);" id="ze-month-summary"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Datum</th><th>Beginn</th><th>Pause</th><th>Ende</th><th>Ist</th><th>Soll</th><th>±</th><th>Kürzel</th><th>Kommentar</th><th></th>
+          </tr></thead>
+          <tbody id="ze-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ÜBERSTUNDENKONTO -->
+  <section class="tab-panel" id="tab-ueberstunden">
+    <div class="card">
+      <div class="row-flex">
+        <h2 style="margin:0;">Monatsübersicht</h2>
+        <button class="primary" id="mo-add">+ Monat</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Monat</th><th>Soll</th><th>Ist</th><th>Überstd.</th><th>Ausbezahlt</th><th>Umwandlung</th><th>Saldo Ende</th><th>Kommentar</th><th></th>
+          </tr></thead>
+          <tbody id="mo-table-body"></tbody>
+        </table>
+      </div>
+      <p class="footnote">"Saldo Ende" wird fortlaufend aus dem Vormonat berechnet: Saldo = Saldo Vormonat + Überstd. − Ausbezahlt − Umwandlung. Monate, die noch nicht stattgefunden haben, sind als Planwert markiert.</p>
+    </div>
+  </section>
+
+  <!-- VERRECHNUNG -->
+  <section class="tab-panel" id="tab-verrechnung">
+    <div class="card">
+      <div class="row-flex">
+        <h2 style="margin:0;">Verrechnung von Anschaffungen</h2>
+        <button class="primary" id="pu-add">+ Eintrag</button>
+      </div>
+      <div class="grid" style="margin-bottom:16px;">
+        <div class="stat-card"><div class="label">Summe Stunden</div><div class="value" id="pu-total-hours">–</div></div>
+        <div class="stat-card"><div class="label">Summe Wert netto</div><div class="value" id="pu-total-value">–</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Bezeichnung</th><th>Monat(e)</th><th>Wert netto</th><th>Stunden</th><th>Typ</th><th></th></tr></thead>
+          <tbody id="pu-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- URLAUB -->
+  <section class="tab-panel" id="tab-urlaub">
+    <div class="card">
+      <div class="row-flex">
+        <h2 style="margin:0;">Urlaubsanspruch</h2>
+        <button class="primary" id="vy-add">+ Jahr</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Jahr</th><th>Anspruch (Tage)</th><th>Genommen</th><th>Resturlaub</th><th></th></tr></thead>
+          <tbody id="vy-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row-flex">
+        <h2 style="margin:0;">Urlaubshistorie</h2>
+        <button class="primary" id="vb-add">+ Buchung</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Von</th><th>Bis</th><th>Tage</th><th>Beschreibung</th><th>Typ</th><th></th></tr></thead>
+          <tbody id="vb-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+// ============================================================================
+// KONFIGURATION
+// ============================================================================
+const SUPABASE_URL = 'https://jwaonkbwirqzwtvvfzac.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_TFi2f1ElN6Th2AsbMpRE0g_E3z5zLHj';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const CODE_LABELS = { K:'Krank', U:'Urlaub', UU:'Unbez. Urlaub', F:'Feiertag', SA:'Std. abwesend', SU:'Std. Urlaub' };
+const MONTH_NAMES = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+let currentUser = null;
+let state = { timeEntries: [], monthlyOverview: [], purchases: [], vacationYears: [], vacationBookings: [] };
+let zeMonthCursor = startOfMonth(new Date());
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+function isoDate(d){ return d.toISOString().slice(0,10); }
+function fmtNum(n, digits=2){ if(n===null||n===undefined||isNaN(n)) return '–'; return Number(n).toLocaleString('de-DE',{minimumFractionDigits:digits,maximumFractionDigits:digits}); }
+function fmtHours(n){ return fmtNum(n,2) + ' Std.'; }
+function isWeekday(dateStr){ const d = new Date(dateStr+'T00:00:00'); const day = d.getDay(); return day>=1 && day<=5; }
+function weekdayShort(dateStr){ return new Date(dateStr+'T00:00:00').toLocaleDateString('de-DE',{weekday:'short'}); }
+function fmtDateShort(dateStr){ return new Date(dateStr+'T00:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function timeDiffHours(start,end){
+  const [sh,sm]=start.split(':').map(Number), [eh,em]=end.split(':').map(Number);
+  return ((eh*60+em)-(sh*60+sm))/60;
+}
+function dailySoll(entry){
+  if(entry.soll_override !== null && entry.soll_override !== undefined) return Number(entry.soll_override);
+  const wd = isWeekday(entry.entry_date);
+  if(['U','UU','F','K'].includes(entry.code)) return 0;
+  if(['SA','SU'].includes(entry.code)) return wd ? Math.max(0, 8 - (Number(entry.absence_hours)||0)) : 0;
+  return wd ? 8 : 0;
+}
+function dailyIst(entry){
+  if(entry.start_time && entry.end_time){
+    return Math.max(0, timeDiffHours(entry.start_time.slice(0,5), entry.end_time.slice(0,5)) - (Number(entry.break_minutes)||0)/60);
+  }
+  return 0;
+}
+function monthKey(dateStr){ return dateStr.slice(0,7); }
+
+// ============================================================================
+// AUTH
+// ============================================================================
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('login-password').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Anmelden…';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Anmelden';
+  if(error){ errEl.textContent = 'Anmeldung fehlgeschlagen: ' + error.message; return; }
+  currentUser = data.user;
+  await enterApp();
+}
+
+document.getElementById('logout-btn').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+});
+
+async function checkExistingSession(){
+  const { data } = await sb.auth.getSession();
+  if(data.session){
+    currentUser = data.session.user;
+    await enterApp();
+  }
+}
+
+async function enterApp(){
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  await loadAll();
+  renderAll();
+}
+
+// ============================================================================
+// DATA LOADING
+// ============================================================================
+async function loadAll(){
+  const [te, mo, pu, vy, vb] = await Promise.all([
+    sb.from('time_entries').select('*').order('entry_date'),
+    sb.from('monthly_overview').select('*').order('month'),
+    sb.from('purchases').select('*').order('created_at'),
+    sb.from('vacation_years').select('*').order('year'),
+    sb.from('vacation_bookings').select('*').order('date_from'),
+  ]);
+  state.timeEntries = te.data || [];
+  state.monthlyOverview = mo.data || [];
+  state.purchases = pu.data || [];
+  state.vacationYears = vy.data || [];
+  state.vacationBookings = vb.data || [];
+  computeMonthlyBalances();
+}
+
+function computeMonthlyBalances(){
+  let prevBalance = null;
+  state.monthlyOverview.forEach((row,i)=>{
+    row._overtime = Number(row.ist_hours) - Number(row.soll_hours);
+    if(i===0){ row._balanceEnd = Number(row.overtime_balance_end); }
+    else { row._balanceEnd = prevBalance + row._overtime - Number(row.paid_out_hours||0) - Number(row.vacation_conversion_hours||0); }
+    prevBalance = row._balanceEnd;
+  });
+}
+
+// ============================================================================
+// RENDER: TABS
+// ============================================================================
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+function renderAll(){
+  renderDashboard();
+  renderZeiterfassung();
+  renderUeberstunden();
+  renderVerrechnung();
+  renderUrlaub();
+}
+
+// ============================================================================
+// DASHBOARD
+// ============================================================================
+function renderDashboard(){
+  const today = new Date();
+  const curMonthKey = isoDate(startOfMonth(today)).slice(0,7);
+
+  // letzte abgeschlossene / vorhandene Monatszeile vor dem aktuellen Monat
+  const priorRows = state.monthlyOverview.filter(r => r.month.slice(0,7) < curMonthKey);
+  const baseBalance = priorRows.length ? priorRows[priorRows.length-1]._balanceEnd : 0;
+
+  const curMonthEntries = state.timeEntries.filter(e => monthKey(e.entry_date) === curMonthKey);
+  const liveIst = curMonthEntries.reduce((s,e)=>s+dailyIst(e),0);
+  const liveSoll = curMonthEntries.reduce((s,e)=>s+dailySoll(e),0);
+  const liveDelta = liveIst - liveSoll;
+  const liveBalance = baseBalance + liveDelta;
+
+  document.getElementById('balance-chip').innerHTML = `Überstunden: <b class="${liveBalance>=0?'pos':'neg'}">${fmtHours(liveBalance)}</b>`;
+
+  const yearNow = today.getFullYear();
+  const vyRow = state.vacationYears.find(v=>v.year===yearNow);
+  const usedDays = state.vacationBookings.filter(b=>b.booking_type==='Urlaub' && b.date_from.slice(0,4)==String(yearNow)).reduce((s,b)=>s+Number(b.days),0);
+  const remainingDays = vyRow ? Number(vyRow.entitlement_days) - usedDays : null;
+
+  const grid = document.getElementById('dashboard-stats');
+  grid.innerHTML = `
+    <div class="stat-card">
+      <div class="label">Überstundensaldo (live)</div>
+      <div class="value ${liveBalance>=0?'pos':'neg'}">${fmtHours(liveBalance)}</div>
+      <div class="sub">Basis ${priorRows.length?fmtHours(baseBalance)+' (Stand '+MONTH_NAMES[new Date(priorRows[priorRows.length-1].month).getMonth()]+')':'0'} + ${fmtHours(liveDelta)} aus ${MONTH_NAMES[today.getMonth()]}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">${MONTH_NAMES[today.getMonth()]} bisher</div>
+      <div class="value">${fmtNum(liveIst,1)} / ${fmtNum(liveSoll,1)} Std.</div>
+      <div class="sub">Ist / Soll aus erfassten Tagen</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Resturlaub ${yearNow}</div>
+      <div class="value">${remainingDays!==null?fmtNum(remainingDays,1):'–'}</div>
+      <div class="sub">von ${vyRow?fmtNum(vyRow.entitlement_days,0):'–'} Tagen Anspruch</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Verrechnet (Anschaffungen)</div>
+      <div class="value">${fmtNum(state.purchases.reduce((s,p)=>s+Number(p.hours),0),1)}</div>
+      <div class="sub">Std. gesamt, ${fmtNum(state.purchases.filter(p=>p.net_value).reduce((s,p)=>s+Number(p.net_value),0),2)} € netto</div>
+    </div>
+  `;
+
+  const recent = [...state.timeEntries].sort((a,b)=>b.entry_date.localeCompare(a.entry_date)).slice(0,8);
+  const tbody = document.getElementById('dashboard-recent');
+  tbody.querySelector && (tbody.innerHTML = recent.length ? recent.map(e=>`
+    <tr>
+      <td>${fmtDateShort(e.entry_date)} (${weekdayShort(e.entry_date)})</td>
+      <td>${e.start_time?e.start_time.slice(0,5):'–'}</td>
+      <td>${e.end_time?e.end_time.slice(0,5):'–'}</td>
+      <td>${fmtHours(dailyIst(e))}</td>
+      <td>${e.code?`<span class="badge ${e.code}">${CODE_LABELS[e.code]}</span>`:''}</td>
+      <td style="color:var(--muted)">${e.comment||''}</td>
+    </tr>
+  `).join('') : '<tr><td class="empty" colspan="6">Noch keine Einträge</td></tr>');
+}
+
+// ============================================================================
+// ZEITERFASSUNG
+// ============================================================================
+document.getElementById('ze-prev').addEventListener('click', ()=>{ zeMonthCursor = new Date(zeMonthCursor.getFullYear(), zeMonthCursor.getMonth()-1, 1); renderZeiterfassung(); });
+document.getElementById('ze-next').addEventListener('click', ()=>{ zeMonthCursor = new Date(zeMonthCursor.getFullYear(), zeMonthCursor.getMonth()+1, 1); renderZeiterfassung(); });
+document.getElementById('ze-add').addEventListener('click', ()=>openTimeEntryModal(null, isoDate(new Date())));
+document.getElementById('ze-today').addEventListener('click', ()=>{
+  const todayStr = isoDate(new Date());
+  const existing = state.timeEntries.find(e=>e.entry_date===todayStr);
+  openTimeEntryModal(existing||null, todayStr);
+});
+
+function renderZeiterfassung(){
+  const mKey = isoDate(zeMonthCursor).slice(0,7);
+  document.getElementById('ze-month-label').textContent = MONTH_NAMES[zeMonthCursor.getMonth()] + ' ' + zeMonthCursor.getFullYear();
+
+  const entries = state.timeEntries.filter(e=>monthKey(e.entry_date)===mKey).sort((a,b)=>a.entry_date.localeCompare(b.entry_date));
+  const totalIst = entries.reduce((s,e)=>s+dailyIst(e),0);
+  const totalSoll = entries.reduce((s,e)=>s+dailySoll(e),0);
+  document.getElementById('ze-month-summary').textContent = `${entries.length} Einträge · Ist ${fmtNum(totalIst,1)} Std. · Soll ${fmtNum(totalSoll,1)} Std. · ${(totalIst-totalSoll)>=0?'+':''}${fmtNum(totalIst-totalSoll,1)} Std.`;
+
+  const todayStr = isoDate(new Date());
+  const tbody = document.getElementById('ze-table-body');
+  tbody.innerHTML = entries.length ? entries.map(e=>{
+    const ist = dailyIst(e), soll = dailySoll(e), diff = ist-soll;
+    return `<tr class="${e.entry_date===todayStr?'today':''}">
+      <td>${fmtDateShort(e.entry_date)} (${weekdayShort(e.entry_date)})</td>
+      <td>${e.start_time?e.start_time.slice(0,5):'–'}</td>
+      <td>${e.break_minutes?e.break_minutes+' min':'–'}</td>
+      <td>${e.end_time?e.end_time.slice(0,5):'–'}</td>
+      <td>${fmtNum(ist,2)}</td>
+      <td>${fmtNum(soll,2)}</td>
+      <td class="${diff>=0?'pos':'neg'}">${diff>=0?'+':''}${fmtNum(diff,2)}</td>
+      <td>${e.code?`<span class="badge ${e.code}">${e.code}</span>`:''}</td>
+      <td style="white-space:normal;color:var(--muted);max-width:200px;">${e.comment||''}</td>
+      <td class="actions-cell">
+        <button class="ghost" onclick="openTimeEntryModal(${JSON.stringify(e).replace(/"/g,'&quot;')})">✎</button>
+        <button class="ghost" onclick="deleteTimeEntry('${e.id}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('') : '<tr><td class="empty" colspan="10">Keine Einträge in diesem Monat</td></tr>';
+}
+
+function openTimeEntryModal(entry, presetDate){
+  const isEdit = !!entry;
+  const e = entry || { entry_date: presetDate, start_time:'', end_time:'', break_minutes:0, code:'', absence_hours:'', soll_override:'', comment:'' };
+  const modalHtml = `
+    <div class="modal-backdrop" id="modal-bg">
+      <div class="modal">
+        <h3>${isEdit?'Eintrag bearbeiten':'Neuer Eintrag'}</h3>
+        <div class="form-grid">
+          <div class="full"><label>Datum</label><input type="date" id="m-date" value="${e.entry_date}"></div>
+          <div><label>Beginn</label><input type="time" id="m-start" value="${e.start_time?e.start_time.slice(0,5):''}"></div>
+          <div><label>Ende</label><input type="time" id="m-end" value="${e.end_time?e.end_time.slice(0,5):''}"></div>
+          <div><label>Pause (Min.)</label><input type="number" id="m-break" value="${e.break_minutes||0}"></div>
+          <div><label>Kürzel</label>
+            <select id="m-code">
+              <option value="">–</option>
+              ${Object.entries(CODE_LABELS).map(([k,v])=>`<option value="${k}" ${e.code===k?'selected':''}>${v}</option>`).join('')}
+            </select>
+          </div>
+          <div><label>Abw. Stunden (SA/SU)</label><input type="number" step="0.25" id="m-absence" value="${e.absence_hours||''}"></div>
+          <div><label>Soll überschreiben</label><input type="number" step="0.25" id="m-sollover" value="${e.soll_override||''}"></div>
+          <div class="full"><label>Kommentar</label><textarea id="m-comment" rows="2">${e.comment||''}</textarea></div>
+        </div>
+        <div class="actions">
+          <button class="ghost" id="m-cancel">Abbrechen</button>
+          <button class="primary" id="m-save">Speichern</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('modal-root').innerHTML = modalHtml;
+  document.getElementById('m-cancel').addEventListener('click', closeModal);
+  document.getElementById('m-save').addEventListener('click', async ()=>{
+    const payload = {
+      entry_date: document.getElementById('m-date').value,
+      start_time: document.getElementById('m-start').value || null,
+      end_time: document.getElementById('m-end').value || null,
+      break_minutes: Number(document.getElementById('m-break').value)||0,
+      code: document.getElementById('m-code').value || null,
+      absence_hours: document.getElementById('m-absence').value ? Number(document.getElementById('m-absence').value) : null,
+      soll_override: document.getElementById('m-sollover').value ? Number(document.getElementById('m-sollover').value) : null,
+      comment: document.getElementById('m-comment').value || null,
+      user_id: currentUser.id,
+    };
+    if(!payload.entry_date){ alert('Bitte Datum angeben.'); return; }
+    let error;
+    if(isEdit){
+      ({error} = await sb.from('time_entries').update(payload).eq('id', entry.id));
+    } else {
+      ({error} = await sb.from('time_entries').upsert(payload, {onConflict:'user_id,entry_date'}));
+    }
+    if(error){ alert('Fehler: '+error.message); return; }
+    closeModal();
+    await loadAll(); renderAll();
+  });
+}
+
+async function deleteTimeEntry(id){
+  if(!confirm('Eintrag wirklich löschen?')) return;
+  const {error} = await sb.from('time_entries').delete().eq('id', id);
+  if(error){ alert('Fehler: '+error.message); return; }
+  await loadAll(); renderAll();
+}
+
+function closeModal(){ document.getElementById('modal-root').innerHTML = ''; }
+
+// ============================================================================
+// ÜBERSTUNDENKONTO
+// ============================================================================
+document.getElementById('mo-add').addEventListener('click', ()=>openMonthlyModal(null));
+
+function renderUeberstunden(){
+  const tbody = document.getElementById('mo-table-body');
+  tbody.innerHTML = state.monthlyOverview.length ? state.monthlyOverview.map(r=>`
+    <tr>
+      <td>${MONTH_NAMES[new Date(r.month).getMonth()]} ${new Date(r.month).getFullYear()}${r.is_projected?' <span class="badge F">Plan</span>':''}</td>
+      <td>${fmtNum(r.soll_hours,1)}</td>
+      <td>${fmtNum(r.ist_hours,1)}</td>
+      <td class="${r._overtime>=0?'pos':'neg'}">${r._overtime>=0?'+':''}${fmtNum(r._overtime,1)}</td>
+      <td>${fmtNum(r.paid_out_hours,1)}</td>
+      <td>${fmtNum(r.vacation_conversion_hours,1)}</td>
+      <td><b class="${r._balanceEnd>=0?'pos':'neg'}">${fmtNum(r._balanceEnd,2)}</b></td>
+      <td style="white-space:normal;color:var(--muted);max-width:160px;">${r.comment||''}</td>
+      <td class="actions-cell">
+        <button class="ghost" onclick='openMonthlyModal(${JSON.stringify(r).replace(/'/g,"&apos;")})'>✎</button>
+        <button class="ghost" onclick="deleteMonthly('${r.id}')">🗑</button>
+      </td>
+    </tr>
+  `).join('') : '<tr><td class="empty" colspan="9">Noch keine Monate erfasst</td></tr>';
+}
+
+function openMonthlyModal(row){
+  const isEdit = !!row;
+  const r = row || { month:isoDate(startOfMonth(new Date())), soll_hours:'', ist_hours:'', paid_out_hours:0, vacation_conversion_hours:0, comment:'', is_projected:false };
+  const modalHtml = `
+    <div class="modal-backdrop" id="modal-bg">
+      <div class="modal">
+        <h3>${isEdit?'Monat bearbeiten':'Monat hinzufügen'}</h3>
+        <div class="form-grid">
+          <div class="full"><label>Monat</label><input type="month" id="m-month" value="${r.month.slice(0,7)}" ${isEdit?'disabled':''}></div>
+          <div><label>Soll (Std.)</label><input type="number" step="0.25" id="m-soll" value="${r.soll_hours}"></div>
+          <div><label>Ist (Std.)</label><input type="number" step="0.25" id="m-ist" value="${r.ist_hours}"></div>
+          <div><label>Ausbezahlt (Std.)</label><input type="number" step="0.25" id="m-paid" value="${r.paid_out_hours}"></div>
+          <div><label>Umwandlung (Std.)</label><input type="number" step="0.25" id="m-conv" value="${r.vacation_conversion_hours}"></div>
+          <div class="full"><label><input type="checkbox" id="m-proj" style="width:auto;display:inline-block;" ${r.is_projected?'checked':''}> Planwert (Monat noch nicht abgeschlossen)</label></div>
+          <div class="full"><label>Kommentar</label><textarea id="m-comment" rows="2">${r.comment||''}</textarea></div>
+        </div>
+        <div class="actions">
+          <button class="ghost" id="m-fromdays">Ist aus Tageserfassung übernehmen</button>
+          <button class="ghost" id="m-cancel">Abbrechen</button>
+          <button class="primary" id="m-save">Speichern</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('modal-root').innerHTML = modalHtml;
+  document.getElementById('m-cancel').addEventListener('click', closeModal);
+  document.getElementById('m-fromdays').addEventListener('click', ()=>{
+    const mk = document.getElementById('m-month').value;
+    const entries = state.timeEntries.filter(e=>monthKey(e.entry_date)===mk);
+    const ist = entries.reduce((s,e)=>s+dailyIst(e),0);
+    document.getElementById('m-ist').value = ist.toFixed(2);
+  });
+  document.getElementById('m-save').addEventListener('click', async ()=>{
+    const payload = {
+      month: document.getElementById('m-month').value + '-01',
+      soll_hours: Number(document.getElementById('m-soll').value)||0,
+      ist_hours: Number(document.getElementById('m-ist').value)||0,
+      paid_out_hours: Number(document.getElementById('m-paid').value)||0,
+      vacation_conversion_hours: Number(document.getElementById('m-conv').value)||0,
+      is_projected: document.getElementById('m-proj').checked,
+      comment: document.getElementById('m-comment').value || null,
+      user_id: currentUser.id,
+    };
+    payload.overtime_hours = payload.ist_hours - payload.soll_hours;
+    // Saldo Ende anhand Vormonat berechnen
+    const sorted = [...state.monthlyOverview].sort((a,b)=>a.month.localeCompare(b.month));
+    const prev = sorted.filter(x=>x.month < payload.month && (!isEdit || x.id!==r.id)).pop();
+    payload.overtime_balance_end = (prev ? prev._balanceEnd : 0) + payload.overtime_hours - payload.paid_out_hours - payload.vacation_conversion_hours;
+    let error;
+    if(isEdit){
+      ({error} = await sb.from('monthly_overview').update(payload).eq('id', r.id));
+    } else {
+      ({error} = await sb.from('monthly_overview').upsert(payload, {onConflict:'user_id,month'}));
+    }
+    if(error){ alert('Fehler: '+error.message); return; }
+    closeModal();
+    await loadAll(); renderAll();
+  });
+}
+
+async function deleteMonthly(id){
+  if(!confirm('Monat wirklich löschen?')) return;
+  const {error} = await sb.from('monthly_overview').delete().eq('id', id);
+  if(error){ alert('Fehler: '+error.message); return; }
+  await loadAll(); renderAll();
+}
+
+// ============================================================================
+// VERRECHNUNG (Anschaffungen)
+// ============================================================================
+document.getElementById('pu-add').addEventListener('click', ()=>openPurchaseModal(null));
+
+function renderVerrechnung(){
+  document.getElementById('pu-total-hours').textContent = fmtNum(state.purchases.reduce((s,p)=>s+Number(p.hours),0),2);
+  document.getElementById('pu-total-value').textContent = fmtNum(state.purchases.filter(p=>p.net_value).reduce((s,p)=>s+Number(p.net_value),0),2) + ' €';
+  const tbody = document.getElementById('pu-table-body');
+  tbody.innerHTML = state.purchases.length ? state.purchases.map(p=>`
+    <tr>
+      <td>${p.description}</td>
+      <td>${p.reference_month||'–'}</td>
+      <td>${p.net_value!==null?fmtNum(p.net_value,2)+' €':'–'}</td>
+      <td>${fmtNum(p.hours,2)}</td>
+      <td>${p.entry_type==='stunden_transfer'?'Stundentransfer':(p.entry_type==='sonstiges'?'Sonstiges':'Anschaffung')}</td>
+      <td class="actions-cell">
+        <button class="ghost" onclick='openPurchaseModal(${JSON.stringify(p).replace(/'/g,"&apos;")})'>✎</button>
+        <button class="ghost" onclick="deletePurchase('${p.id}')">🗑</button>
+      </td>
+    </tr>
+  `).join('') : '<tr><td class="empty" colspan="6">Noch keine Einträge</td></tr>';
+}
+
+function openPurchaseModal(p){
+  const isEdit = !!p;
+  const r = p || { description:'', reference_month:'', net_value:'', hours:'', entry_type:'anschaffung', comment:'' };
+  const modalHtml = `
+    <div class="modal-backdrop" id="modal-bg">
+      <div class="modal">
+        <h3>${isEdit?'Eintrag bearbeiten':'Neue Verrechnung'}</h3>
+        <div class="form-grid">
+          <div class="full"><label>Bezeichnung</label><input type="text" id="m-desc" value="${(r.description||'').replace(/"/g,'&quot;')}"></div>
+          <div><label>Monat(e)</label><input type="text" id="m-refmonth" placeholder="z.B. 09.2026" value="${r.reference_month||''}"></div>
+          <div><label>Typ</label>
+            <select id="m-type">
+              <option value="anschaffung" ${r.entry_type==='anschaffung'?'selected':''}>Anschaffung</option>
+              <option value="stunden_transfer" ${r.entry_type==='stunden_transfer'?'selected':''}>Stundentransfer</option>
+              <option value="sonstiges" ${r.entry_type==='sonstiges'?'selected':''}>Sonstiges</option>
+            </select>
+          </div>
+          <div><label>Wert netto (€)</label><input type="number" step="0.01" id="m-value" value="${r.net_value!==null?r.net_value:''}"></div>
+          <div><label>Stunden</label><input type="number" step="0.25" id="m-hours" value="${r.hours}"></div>
+        </div>
+        <div class="actions">
+          <button class="ghost" id="m-cancel">Abbrechen</button>
+          <button class="primary" id="m-save">Speichern</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('modal-root').innerHTML = modalHtml;
+  document.getElementById('m-cancel').addEventListener('click', closeModal);
+  document.getElementById('m-save').addEventListener('click', async ()=>{
+    const payload = {
+      description: document.getElementById('m-desc').value,
+      reference_month: document.getElementById('m-refmonth').value || null,
+      entry_type: document.getElementById('m-type').value,
+      net_value: document.getElementById('m-value').value ? Number(document.getElementById('m-value').value) : null,
+      hours: Number(document.getElementById('m-hours').value)||0,
+      user_id: currentUser.id,
+    };
+    if(!payload.description){ alert('Bitte Bezeichnung angeben.'); return; }
+    let error;
+    if(isEdit){ ({error} = await sb.from('purchases').update(payload).eq('id', r.id)); }
+    else { ({error} = await sb.from('purchases').insert(payload)); }
+    if(error){ alert('Fehler: '+error.message); return; }
+    closeModal();
+    await loadAll(); renderAll();
+  });
+}
+
+async function deletePurchase(id){
+  if(!confirm('Eintrag wirklich löschen?')) return;
+  const {error} = await sb.from('purchases').delete().eq('id', id);
+  if(error){ alert('Fehler: '+error.message); return; }
+  await loadAll(); renderAll();
+}
+
+// ============================================================================
+// URLAUB
+// ============================================================================
+document.getElementById('vy-add').addEventListener('click', ()=>openVacationYearModal(null));
+document.getElementById('vb-add').addEventListener('click', ()=>openVacationBookingModal(null));
+
+function renderUrlaub(){
+  const vyBody = document.getElementById('vy-table-body');
+  vyBody.innerHTML = state.vacationYears.length ? state.vacationYears.map(vy=>{
+    const used = state.vacationBookings.filter(b=>b.booking_type==='Urlaub' && b.date_from.slice(0,4)===String(vy.year)).reduce((s,b)=>s+Number(b.days),0);
+    const remaining = Number(vy.entitlement_days) - used;
+    return `<tr>
+      <td>${vy.year}</td>
+      <td>${fmtNum(vy.entitlement_days,1)}</td>
+      <td>${fmtNum(used,1)}</td>
+      <td><b>${fmtNum(remaining,1)}</b></td>
+      <td class="actions-cell">
+        <button class="ghost" onclick='openVacationYearModal(${JSON.stringify(vy).replace(/'/g,"&apos;")})'>✎</button>
+        <button class="ghost" onclick="deleteVacationYear('${vy.id}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('') : '<tr><td class="empty" colspan="5">Noch keine Jahre erfasst</td></tr>';
+
+  const vbBody = document.getElementById('vb-table-body');
+  const sortedBookings = [...state.vacationBookings].sort((a,b)=>b.date_from.localeCompare(a.date_from));
+  vbBody.innerHTML = sortedBookings.length ? sortedBookings.map(vb=>`
+    <tr>
+      <td>${fmtDateShort(vb.date_from)}</td>
+      <td>${fmtDateShort(vb.date_to)}</td>
+      <td>${fmtNum(vb.days,1)}</td>
+      <td>${vb.description||''}</td>
+      <td>${vb.booking_type}</td>
+      <td class="actions-cell">
+        <button class="ghost" onclick='openVacationBookingModal(${JSON.stringify(vb).replace(/'/g,"&apos;")})'>✎</button>
+        <button class="ghost" onclick="deleteVacationBooking('${vb.id}')">🗑</button>
+      </td>
+    </tr>
+  `).join('') : '<tr><td class="empty" colspan="6">Noch keine Buchungen</td></tr>';
+}
+
+function openVacationYearModal(vy){
+  const isEdit = !!vy;
+  const r = vy || { year:new Date().getFullYear(), entitlement_days:30 };
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-backdrop" id="modal-bg">
+      <div class="modal">
+        <h3>${isEdit?'Jahr bearbeiten':'Jahr hinzufügen'}</h3>
+        <div class="form-grid">
+          <div><label>Jahr</label><input type="number" id="m-year" value="${r.year}" ${isEdit?'disabled':''}></div>
+          <div><label>Anspruch (Tage)</label><input type="number" step="0.5" id="m-ent" value="${r.entitlement_days}"></div>
+        </div>
+        <div class="actions">
+          <button class="ghost" id="m-cancel">Abbrechen</button>
+          <button class="primary" id="m-save">Speichern</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('m-cancel').addEventListener('click', closeModal);
+  document.getElementById('m-save').addEventListener('click', async ()=>{
+    const payload = { year: Number(document.getElementById('m-year').value), entitlement_days: Number(document.getElementById('m-ent').value)||0, user_id: currentUser.id };
+    let error;
+    if(isEdit){ ({error} = await sb.from('vacation_years').update(payload).eq('id', r.id)); }
+    else { ({error} = await sb.from('vacation_years').upsert(payload, {onConflict:'user_id,year'})); }
+    if(error){ alert('Fehler: '+error.message); return; }
+    closeModal(); await loadAll(); renderAll();
+  });
+}
+
+async function deleteVacationYear(id){
+  if(!confirm('Jahr wirklich löschen?')) return;
+  const {error} = await sb.from('vacation_years').delete().eq('id', id);
+  if(error){ alert('Fehler: '+error.message); return; }
+  await loadAll(); renderAll();
+}
+
+function openVacationBookingModal(vb){
+  const isEdit = !!vb;
+  const r = vb || { date_from:isoDate(new Date()), date_to:isoDate(new Date()), days:1, description:'', booking_type:'Urlaub' };
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-backdrop" id="modal-bg">
+      <div class="modal">
+        <h3>${isEdit?'Buchung bearbeiten':'Neue Buchung'}</h3>
+        <div class="form-grid">
+          <div><label>Von</label><input type="date" id="m-from" value="${r.date_from}"></div>
+          <div><label>Bis</label><input type="date" id="m-to" value="${r.date_to}"></div>
+          <div><label>Tage</label><input type="number" step="0.5" id="m-days" value="${r.days}"></div>
+          <div><label>Typ</label>
+            <select id="m-btype">
+              <option value="Urlaub" ${r.booking_type==='Urlaub'?'selected':''}>Urlaub</option>
+              <option value="Sonderurlaub" ${r.booking_type==='Sonderurlaub'?'selected':''}>Sonderurlaub</option>
+              <option value="Sonstiges" ${r.booking_type==='Sonstiges'?'selected':''}>Sonstiges</option>
+            </select>
+          </div>
+          <div class="full"><label>Beschreibung</label><input type="text" id="m-desc" value="${(r.description||'').replace(/"/g,'&quot;')}"></div>
+        </div>
+        <div class="actions">
+          <button class="ghost" id="m-cancel">Abbrechen</button>
+          <button class="primary" id="m-save">Speichern</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('m-cancel').addEventListener('click', closeModal);
+  document.getElementById('m-save').addEventListener('click', async ()=>{
+    const payload = {
+      date_from: document.getElementById('m-from').value,
+      date_to: document.getElementById('m-to').value,
+      days: Number(document.getElementById('m-days').value)||0,
+      booking_type: document.getElementById('m-btype').value,
+      description: document.getElementById('m-desc').value || null,
+      user_id: currentUser.id,
+    };
+    let error;
+    if(isEdit){ ({error} = await sb.from('vacation_bookings').update(payload).eq('id', r.id)); }
+    else { ({error} = await sb.from('vacation_bookings').insert(payload)); }
+    if(error){ alert('Fehler: '+error.message); return; }
+    closeModal(); await loadAll(); renderAll();
+  });
+}
+
+async function deleteVacationBooking(id){
+  if(!confirm('Buchung wirklich löschen?')) return;
+  const {error} = await sb.from('vacation_bookings').delete().eq('id', id);
+  if(error){ alert('Fehler: '+error.message); return; }
+  await loadAll(); renderAll();
+}
+
+// ============================================================================
+// START
+// ============================================================================
+checkExistingSession();
+</script>
+</body>
+</html>
