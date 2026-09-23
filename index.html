@@ -212,12 +212,12 @@
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>Monat</th><th>Soll</th><th>Ist</th><th>Überstd.</th><th>Ausbezahlt</th><th>Umwandlung</th><th>Saldo Ende</th><th>Kommentar</th><th></th>
+            <th>Monat</th><th>Soll</th><th>Ist</th><th>Überstd.</th><th>Ausbezahlt</th><th>Umwandlung</th><th>Verrechnung</th><th>Saldo Ende</th><th>Kommentar</th><th></th>
           </tr></thead>
           <tbody id="mo-table-body"></tbody>
         </table>
       </div>
-      <p class="footnote">"Saldo Ende" wird fortlaufend aus dem Vormonat berechnet: Saldo = Saldo Vormonat + Überstd. − Ausbezahlt − Umwandlung. Monate, die noch nicht stattgefunden haben, sind als Planwert markiert.</p>
+      <p class="footnote">"Saldo Ende" wird fortlaufend aus dem Vormonat berechnet: Saldo = Saldo Vormonat + Überstd. − Ausbezahlt − Umwandlung − Verrechnung (Anschaffungen des Monats). Die "Verrechnung" wird automatisch aus dem Reiter "Verrechnung" anhand des dort angegebenen Monats zugeordnet. Der laufende Monat ist mit "Live" markiert: Ist/Überstd./Saldo rechnen sich bei jedem Laden aus deinen bisherigen Tageseinträgen neu, ganz ohne dass du etwas speichern musst. Zukünftige Monate ohne Tageseinträge bleiben als Planwert stehen.</p>
     </div>
   </section>
 
@@ -228,9 +228,16 @@
         <h2 style="margin:0;">Verrechnung von Anschaffungen</h2>
         <button class="primary" id="pu-add">+ Eintrag</button>
       </div>
+      <div class="row-flex">
+        <div class="month-nav">
+          <input type="month" id="pu-month-filter" style="width:auto;">
+          <button class="ghost" id="pu-month-clear">Alle Monate</button>
+        </div>
+        <div style="font-size:13px;color:var(--muted);" id="pu-filter-summary"></div>
+      </div>
       <div class="grid" style="margin-bottom:16px;">
-        <div class="stat-card"><div class="label">Summe Stunden</div><div class="value" id="pu-total-hours">–</div></div>
-        <div class="stat-card"><div class="label">Summe Wert netto</div><div class="value" id="pu-total-value">–</div></div>
+        <div class="stat-card"><div class="label" id="pu-hours-label">Summe Stunden</div><div class="value" id="pu-total-hours">–</div></div>
+        <div class="stat-card"><div class="label" id="pu-value-label">Summe Wert netto</div><div class="value" id="pu-total-value">–</div></div>
       </div>
       <div class="table-wrap">
         <table>
@@ -238,6 +245,7 @@
           <tbody id="pu-table-body"></tbody>
         </table>
       </div>
+      <p class="footnote">Der Monatsfilter ordnet jede Verrechnung anhand von "Monat(e)" zu (bei mehreren genannten Monaten zählt der erste). Diese Zuordnung entscheidet auch, in welchem Monat die Stunden im Überstundenkonto abgezogen werden.</p>
     </div>
   </section>
 
@@ -394,15 +402,70 @@ async function loadAll(){
   state.purchases = pu.data || [];
   state.vacationYears = vy.data || [];
   state.vacationBookings = vb.data || [];
+  await autoFinalizeMonths();
   computeMonthlyBalances();
 }
 
+// Ein Monat, der als "Planwert" markiert ist und komplett vorbei ist, wird beim Laden
+// automatisch mit dem echten Ist-Wert aus der Tageserfassung überschrieben (nur wenn für
+// diesen Monat auch tatsächlich Tageseinträge vorliegen — sonst bleibt der Platzhalter stehen).
+async function autoFinalizeMonths(){
+  const today = new Date();
+  const updates = [];
+  for(const row of state.monthlyOverview){
+    if(!row.is_projected) continue;
+    const [y,m] = row.month.split('-').map(Number);
+    const monthEnd = new Date(y, m, 0); // letzter Tag des Monats
+    if(today <= monthEnd) continue;
+    const mk = row.month.slice(0,7);
+    const entries = state.timeEntries.filter(e=>monthKey(e.entry_date)===mk);
+    if(entries.length === 0) continue;
+    const ist = entries.reduce((s,e)=>s+dailyIst(e),0);
+    row.ist_hours = ist;
+    row.is_projected = false;
+    updates.push(sb.from('monthly_overview').update({ist_hours: ist, is_projected:false}).eq('id', row.id));
+  }
+  if(updates.length) await Promise.all(updates);
+}
+
+// Ordnet eine Verrechnung (Anschaffung) einem Monat (YYYY-MM) zu: zuerst wird versucht, das
+// Monat/Jahr aus "Monat(e)" zu lesen (z.B. "02.2026" oder "04.2026+05.2026" -> erster Treffer
+// zählt), sonst wird der Monat genommen, in dem der Eintrag angelegt wurde.
+function purchaseMonthKey(p){
+  if(p.reference_month){
+    const m = p.reference_month.match(/(\d{2})\.(\d{4})/);
+    if(m) return `${m[2]}-${m[1]}`;
+  }
+  return (p.created_at||'').slice(0,7);
+}
+
 function computeMonthlyBalances(){
+  const purchasesByMonth = {};
+  state.purchases.forEach(p=>{
+    const mk = purchaseMonthKey(p);
+    purchasesByMonth[mk] = (purchasesByMonth[mk]||0) + (Number(p.hours)||0);
+  });
+  const curMonthKeyStr = isoDate(new Date()).slice(0,7);
   let prevBalance = null;
   state.monthlyOverview.forEach((row,i)=>{
     row._overtime = Number(row.ist_hours) - Number(row.soll_hours);
-    if(i===0){ row._balanceEnd = Number(row.overtime_balance_end); }
-    else { row._balanceEnd = prevBalance + row._overtime - Number(row.paid_out_hours||0) - Number(row.vacation_conversion_hours||0); }
+    row._isLive = false;
+    // Laufender Monat: solange er noch als Planwert markiert ist, wird Ist/Überstd. live aus
+    // den bereits erfassten Tagen hochgerechnet, statt auf den (Monatsabschluss zu warten).
+    if(row.month.slice(0,7) === curMonthKeyStr && row.is_projected){
+      const liveEntries = state.timeEntries.filter(e=>monthKey(e.entry_date)===curMonthKeyStr);
+      if(liveEntries.length){
+        row._liveIst = liveEntries.reduce((s,e)=>s+dailyIst(e),0);
+        row._overtime = row._liveIst - Number(row.soll_hours);
+        row._isLive = true;
+      }
+    }
+    row._purchaseHours = purchasesByMonth[row.month.slice(0,7)] || 0;
+    let base;
+    if(i===0){ base = Number(row.overtime_balance_end); }
+    else { base = prevBalance + row._overtime - Number(row.paid_out_hours||0) - Number(row.vacation_conversion_hours||0); }
+    // Verrechnungen (Anschaffungen) werden immer zusätzlich vom Saldo abgezogen
+    row._balanceEnd = base - row._purchaseHours;
     prevBalance = row._balanceEnd;
   });
 }
@@ -442,7 +505,8 @@ function renderDashboard(){
   const liveIst = curMonthEntries.reduce((s,e)=>s+dailyIst(e),0);
   const liveSoll = curMonthEntries.reduce((s,e)=>s+dailySoll(e),0);
   const liveDelta = liveIst - liveSoll;
-  const liveBalance = baseBalance + liveDelta;
+  const curMonthPurchaseHours = state.purchases.filter(p=>purchaseMonthKey(p)===curMonthKey).reduce((s,p)=>s+(Number(p.hours)||0),0);
+  const liveBalance = baseBalance + liveDelta - curMonthPurchaseHours;
 
   document.getElementById('balance-chip').innerHTML = `Überstunden: <b class="${liveBalance>=0?'pos':'neg'}">${fmtHours(liveBalance)}</b>`;
 
@@ -493,7 +557,7 @@ function renderDashboard(){
       <div class="icon-badge blue">${svgIcon('clock')}</div>
       <div class="label">Überstundensaldo (live)</div>
       <div class="value ${liveBalance>=0?'pos':'neg'}">${fmtHours(liveBalance)}</div>
-      <div class="sub">Basis ${priorRows.length?fmtHours(baseBalance)+' (Stand '+MONTH_NAMES[new Date(priorRows[priorRows.length-1].month).getMonth()]+')':'0'} + ${fmtHours(liveDelta)} aus ${MONTH_NAMES[today.getMonth()]}</div>
+      <div class="sub">Basis ${priorRows.length?fmtHours(baseBalance)+' (Stand '+MONTH_NAMES[new Date(priorRows[priorRows.length-1].month).getMonth()]+')':'0'} + ${fmtHours(liveDelta)} aus ${MONTH_NAMES[today.getMonth()]}${curMonthPurchaseHours?' − '+fmtHours(curMonthPurchaseHours)+' Verrechnung':''}</div>
     </div>
     <div class="stat-card">
       <div class="icon-badge blue">${svgIcon('bars')}</div>
@@ -510,8 +574,8 @@ function renderDashboard(){
     <div class="stat-card">
       <div class="icon-badge orange">${svgIcon('cart')}</div>
       <div class="label">Verrechnet (Anschaffungen)</div>
-      <div class="value">${fmtNum(state.purchases.reduce((s,p)=>s+Number(p.hours),0),1)}</div>
-      <div class="sub">Std. gesamt, ${fmtNum(state.purchases.filter(p=>p.net_value).reduce((s,p)=>s+Number(p.net_value),0),2)} € netto</div>
+      <div class="value">−${fmtNum(state.purchases.reduce((s,p)=>s+Number(p.hours),0),1)} Std.</div>
+      <div class="sub">wird vom Überstundensaldo abgezogen · ${fmtNum(state.purchases.filter(p=>p.net_value).reduce((s,p)=>s+Number(p.net_value),0),2)} € netto gesamt</div>
     </div>
   `;
 
@@ -654,7 +718,8 @@ function renderUeberstunden(){
   const grossOvertime = yearRows.reduce((s,r)=>s+r._overtime,0);
   const paidOutYear = yearRows.reduce((s,r)=>s+Number(r.paid_out_hours||0),0);
   const convertedYear = yearRows.reduce((s,r)=>s+Number(r.vacation_conversion_hours||0),0);
-  const netYear = grossOvertime - paidOutYear - convertedYear;
+  const purchasesYear = yearRows.reduce((s,r)=>s+(r._purchaseHours||0),0);
+  const netYear = grossOvertime - paidOutYear - convertedYear - purchasesYear;
   document.getElementById('mo-year-stats').innerHTML = `
     <div class="stat-card">
       <div class="icon-badge blue">${svgIcon('bars')}</div>
@@ -664,9 +729,9 @@ function renderUeberstunden(){
     </div>
     <div class="stat-card">
       <div class="icon-badge orange">${svgIcon('clock')}</div>
-      <div class="label">Ausbezahlt/umgewandelt ${yearNow}</div>
-      <div class="value">${fmtNum(paidOutYear+convertedYear,1)} Std.</div>
-      <div class="sub">davon ${fmtNum(paidOutYear,1)} Std. ausbezahlt, ${fmtNum(convertedYear,1)} Std. Umwandlung</div>
+      <div class="label">Ausbezahlt/umgewandelt/verrechnet ${yearNow}</div>
+      <div class="value">${fmtNum(paidOutYear+convertedYear+purchasesYear,1)} Std.</div>
+      <div class="sub">davon ${fmtNum(paidOutYear,1)} Std. ausbezahlt, ${fmtNum(convertedYear,1)} Std. Umwandlung, ${fmtNum(purchasesYear,1)} Std. Verrechnung</div>
     </div>
     <div class="stat-card">
       <div class="icon-badge purple">${svgIcon('check')}</div>
@@ -679,12 +744,13 @@ function renderUeberstunden(){
   const tbody = document.getElementById('mo-table-body');
   tbody.innerHTML = state.monthlyOverview.length ? state.monthlyOverview.map(r=>`
     <tr>
-      <td data-label="Monat">${MONTH_NAMES[new Date(r.month).getMonth()]} ${new Date(r.month).getFullYear()}${r.is_projected?' <span class="badge F">Plan</span>':''}</td>
+      <td data-label="Monat">${MONTH_NAMES[new Date(r.month).getMonth()]} ${new Date(r.month).getFullYear()}${r._isLive?' <span class="badge U">Live</span>':(r.is_projected?' <span class="badge F">Plan</span>':'')}</td>
       <td data-label="Soll">${fmtNum(r.soll_hours,1)}</td>
-      <td data-label="Ist">${fmtNum(r.ist_hours,1)}</td>
+      <td data-label="Ist">${fmtNum(r._isLive?r._liveIst:r.ist_hours,1)}</td>
       <td data-label="Überstd." class="${r._overtime>=0?'pos':'neg'}">${r._overtime>=0?'+':''}${fmtNum(r._overtime,1)}</td>
       <td data-label="Ausbezahlt">${fmtNum(r.paid_out_hours,1)}</td>
       <td data-label="Umwandlung">${fmtNum(r.vacation_conversion_hours,1)}</td>
+      <td data-label="Verrechnung">${r._purchaseHours?'−'+fmtNum(r._purchaseHours,1):'–'}</td>
       <td data-label="Saldo Ende"><b class="${r._balanceEnd>=0?'pos':'neg'}">${fmtNum(r._balanceEnd,2)}</b></td>
       <td data-label="Kommentar" style="white-space:normal;color:var(--muted);max-width:160px;">${r.comment||'–'}</td>
       <td class="actions-cell">
@@ -738,10 +804,11 @@ function openMonthlyModal(row){
       user_id: currentUser.id,
     };
     payload.overtime_hours = payload.ist_hours - payload.soll_hours;
-    // Saldo Ende anhand Vormonat berechnen
+    // Saldo Ende anhand Vormonat berechnen (inkl. Verrechnung/Anschaffungen dieses Monats)
     const sorted = [...state.monthlyOverview].sort((a,b)=>a.month.localeCompare(b.month));
     const prev = sorted.filter(x=>x.month < payload.month && (!isEdit || x.id!==r.id)).pop();
-    payload.overtime_balance_end = (prev ? prev._balanceEnd : 0) + payload.overtime_hours - payload.paid_out_hours - payload.vacation_conversion_hours;
+    const purchaseHoursThisMonth = state.purchases.filter(p=>purchaseMonthKey(p)===payload.month.slice(0,7)).reduce((s,p)=>s+(Number(p.hours)||0),0);
+    payload.overtime_balance_end = (prev ? prev._balanceEnd : 0) + payload.overtime_hours - payload.paid_out_hours - payload.vacation_conversion_hours - purchaseHoursThisMonth;
     let error;
     if(isEdit){
       ({error} = await sb.from('monthly_overview').update(payload).eq('id', r.id));
@@ -764,13 +831,26 @@ async function deleteMonthly(id){
 // ============================================================================
 // VERRECHNUNG (Anschaffungen)
 // ============================================================================
+let puMonthFilter = null; // 'YYYY-MM' oder null = alle Monate
 document.getElementById('pu-add').addEventListener('click', ()=>openPurchaseModal(null));
+document.getElementById('pu-month-filter').addEventListener('change', e=>{ puMonthFilter = e.target.value || null; renderVerrechnung(); });
+document.getElementById('pu-month-clear').addEventListener('click', ()=>{ puMonthFilter = null; document.getElementById('pu-month-filter').value=''; renderVerrechnung(); });
 
 function renderVerrechnung(){
-  document.getElementById('pu-total-hours').textContent = fmtNum(state.purchases.reduce((s,p)=>s+Number(p.hours),0),2);
-  document.getElementById('pu-total-value').textContent = fmtNum(state.purchases.filter(p=>p.net_value).reduce((s,p)=>s+Number(p.net_value),0),2) + ' €';
+  const filtered = puMonthFilter ? state.purchases.filter(p=>purchaseMonthKey(p)===puMonthFilter) : state.purchases;
+  const totalHours = filtered.reduce((s,p)=>s+Number(p.hours),0);
+  const totalValue = filtered.filter(p=>p.net_value).reduce((s,p)=>s+Number(p.net_value),0);
+
+  document.getElementById('pu-hours-label').textContent = puMonthFilter ? 'Stunden in diesem Monat' : 'Summe Stunden (gesamt)';
+  document.getElementById('pu-value-label').textContent = puMonthFilter ? 'Wert netto in diesem Monat' : 'Summe Wert netto (gesamt)';
+  document.getElementById('pu-total-hours').textContent = fmtNum(totalHours,2);
+  document.getElementById('pu-total-value').textContent = fmtNum(totalValue,2) + ' €';
+  document.getElementById('pu-filter-summary').textContent = puMonthFilter
+    ? `${filtered.length} Eintrag${filtered.length===1?'':'e'} im ausgewählten Monat`
+    : `${filtered.length} Einträge gesamt`;
+
   const tbody = document.getElementById('pu-table-body');
-  tbody.innerHTML = state.purchases.length ? state.purchases.map(p=>`
+  tbody.innerHTML = filtered.length ? filtered.map(p=>`
     <tr>
       <td data-label="Bezeichnung">${p.description}</td>
       <td data-label="Monat(e)">${p.reference_month||'–'}</td>
@@ -782,7 +862,7 @@ function renderVerrechnung(){
         <button class="ghost" onclick="deletePurchase('${p.id}')">🗑</button>
       </td>
     </tr>
-  `).join('') : '<tr class="empty-row"><td class="empty" colspan="6">Noch keine Einträge</td></tr>';
+  `).join('') : `<tr class="empty-row"><td class="empty" colspan="6">${puMonthFilter?'Keine Einträge in diesem Monat':'Noch keine Einträge'}</td></tr>`;
 }
 
 function openPurchaseModal(p){
