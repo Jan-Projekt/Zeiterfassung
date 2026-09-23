@@ -10,6 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="Zeiterfassung">
 <title>Zeiterfassung</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
 <style>
   :root{
     --bg:#f4f5f8; --card:#ffffff; --text:#14161a; --muted:#70747e;
@@ -291,6 +293,13 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const CODE_LABELS = { K:'Krank', U:'Urlaub', UU:'Unbez. Urlaub', F:'Feiertag', SA:'Std. abwesend', SU:'Std. Urlaub' };
 const MONTH_NAMES = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+// Ab diesem Monat (YYYY-MM) wird eine Verrechnung (Anschaffung) automatisch vom Überstundensaldo
+// abgezogen. Monate davor stammen aus dem ursprünglichen Excel-Import, wo Verrechnungen bereits
+// manuell in die dort hinterlegten Ist-/Saldo-Werte eingerechnet waren (z.B. August: 199,25 Std.
+// Saldo Ende war schon "netto"). Würde man das hier nochmal automatisch abziehen, zöge man es
+// doppelt ab. Ab diesem Monat läuft die Zeiterfassung live über die App, daher greift die
+// automatische Verrechnung erst ab hier.
+const VERRECHNUNG_CUTOFF_MONTH = '2026-09';
 const ICON_PATHS = {
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/>',
   bars: '<path d="M3 20V10M10 20V4M17 20v-7"/>',
@@ -450,12 +459,15 @@ function computeMonthlyBalances(){
     row._overtime = Number(row.ist_hours) - Number(row.soll_hours);
     // Laufender Monat und Zukunft bleiben bewusst auf dem Planwert stehen, bis der Monat
     // abgeschlossen ist (autoFinalizeMonths übernimmt das automatisch ab dem 1. des Folgemonats).
-    row._purchaseHours = purchasesByMonth[row.month.slice(0,7)] || 0;
+    const mk = row.month.slice(0,7);
+    row._purchaseHours = purchasesByMonth[mk] || 0;
+    // Nur ab VERRECHNUNG_CUTOFF_MONTH wird die Verrechnung tatsächlich vom Saldo abgezogen (siehe
+    // Kommentar bei der Konstante). Für ältere Monate wird sie nur informativ angezeigt.
+    row._purchaseApplied = mk >= VERRECHNUNG_CUTOFF_MONTH;
     let base;
     if(i===0){ base = Number(row.overtime_balance_end); }
     else { base = prevBalance + row._overtime - Number(row.paid_out_hours||0) - Number(row.vacation_conversion_hours||0); }
-    // Verrechnungen (Anschaffungen) werden immer zusätzlich vom Saldo abgezogen
-    row._balanceEnd = base - row._purchaseHours;
+    row._balanceEnd = row._purchaseApplied ? (base - row._purchaseHours) : base;
     prevBalance = row._balanceEnd;
   });
 }
@@ -496,7 +508,8 @@ function renderDashboard(){
   const liveSoll = curMonthEntries.reduce((s,e)=>s+dailySoll(e),0);
   const liveDelta = liveIst - liveSoll;
   const curMonthPurchaseHours = state.purchases.filter(p=>purchaseMonthKey(p)===curMonthKey).reduce((s,p)=>s+(Number(p.hours)||0),0);
-  const liveBalance = baseBalance + liveDelta - curMonthPurchaseHours;
+  const curMonthPurchaseApplied = curMonthKey >= VERRECHNUNG_CUTOFF_MONTH;
+  const liveBalance = baseBalance + liveDelta - (curMonthPurchaseApplied ? curMonthPurchaseHours : 0);
 
   document.getElementById('balance-chip').innerHTML = `Überstunden: <b class="${liveBalance>=0?'pos':'neg'}">${fmtHours(liveBalance)}</b>`;
 
@@ -708,7 +721,7 @@ function renderUeberstunden(){
   const grossOvertime = yearRows.reduce((s,r)=>s+r._overtime,0);
   const paidOutYear = yearRows.reduce((s,r)=>s+Number(r.paid_out_hours||0),0);
   const convertedYear = yearRows.reduce((s,r)=>s+Number(r.vacation_conversion_hours||0),0);
-  const purchasesYear = yearRows.reduce((s,r)=>s+(r._purchaseHours||0),0);
+  const purchasesYear = yearRows.reduce((s,r)=>s+(r._purchaseApplied ? (r._purchaseHours||0) : 0),0);
   const netYear = grossOvertime - paidOutYear - convertedYear - purchasesYear;
   document.getElementById('mo-year-stats').innerHTML = `
     <div class="stat-card">
@@ -740,10 +753,11 @@ function renderUeberstunden(){
       <td data-label="Überstd." class="${r._overtime>=0?'pos':'neg'}">${r._overtime>=0?'+':''}${fmtNum(r._overtime,1)}</td>
       <td data-label="Ausbezahlt">${fmtNum(r.paid_out_hours,1)}</td>
       <td data-label="Umwandlung">${fmtNum(r.vacation_conversion_hours,1)}</td>
-      <td data-label="Verrechnung">${r._purchaseHours?'−'+fmtNum(r._purchaseHours,1):'–'}</td>
+      <td data-label="Verrechnung">${r._purchaseHours ? (r._purchaseApplied ? '−'+fmtNum(r._purchaseHours,1) : `<span style="color:var(--muted)" title="Bereits in den importierten Ist-/Saldo-Werten enthalten, wird hier nicht nochmal abgezogen">${fmtNum(r._purchaseHours,1)} (in Ist enthalten)</span>`) : '–'}</td>
       <td data-label="Saldo Ende"><b class="${r._balanceEnd>=0?'pos':'neg'}">${fmtNum(r._balanceEnd,2)}</b></td>
       <td data-label="Kommentar" style="white-space:normal;color:var(--muted);max-width:160px;">${r.comment||'–'}</td>
       <td class="actions-cell">
+        <button class="ghost" title="Als PDF exportieren" onclick="exportMonthPdf('${r.month.slice(0,7)}')">📄</button>
         <button class="ghost" onclick='openMonthlyModal(${JSON.stringify(r).replace(/'/g,"&apos;")})'>✎</button>
         <button class="ghost" onclick="deleteMonthly('${r.id}')">🗑</button>
       </td>
@@ -798,7 +812,8 @@ function openMonthlyModal(row){
     const sorted = [...state.monthlyOverview].sort((a,b)=>a.month.localeCompare(b.month));
     const prev = sorted.filter(x=>x.month < payload.month && (!isEdit || x.id!==r.id)).pop();
     const purchaseHoursThisMonth = state.purchases.filter(p=>purchaseMonthKey(p)===payload.month.slice(0,7)).reduce((s,p)=>s+(Number(p.hours)||0),0);
-    payload.overtime_balance_end = (prev ? prev._balanceEnd : 0) + payload.overtime_hours - payload.paid_out_hours - payload.vacation_conversion_hours - purchaseHoursThisMonth;
+    const purchaseAppliedThisMonth = payload.month.slice(0,7) >= VERRECHNUNG_CUTOFF_MONTH;
+    payload.overtime_balance_end = (prev ? prev._balanceEnd : 0) + payload.overtime_hours - payload.paid_out_hours - payload.vacation_conversion_hours - (purchaseAppliedThisMonth ? purchaseHoursThisMonth : 0);
     let error;
     if(isEdit){
       ({error} = await sb.from('monthly_overview').update(payload).eq('id', r.id));
@@ -816,6 +831,105 @@ async function deleteMonthly(id){
   const {error} = await sb.from('monthly_overview').delete().eq('id', id);
   if(error){ alert('Fehler: '+error.message); return; }
   await loadAll(); renderAll();
+}
+
+// ============================================================================
+// PDF-EXPORT: Monatsauswertung
+// ============================================================================
+function exportMonthPdf(mk){
+  const jsPDFCtor = window.jspdf && window.jspdf.jsPDF;
+  if(!jsPDFCtor){ alert('PDF-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.'); return; }
+
+  const row = state.monthlyOverview.find(r=>r.month.slice(0,7)===mk);
+  const [y,m] = mk.split('-').map(Number);
+  const monthLabel = `${MONTH_NAMES[m-1]} ${y}`;
+  const entries = state.timeEntries.filter(e=>monthKey(e.entry_date)===mk).sort((a,b)=>a.entry_date.localeCompare(b.entry_date));
+  const purchasesInMonth = state.purchases.filter(p=>purchaseMonthKey(p)===mk);
+  const vacEntries = entries.filter(e=>e.code==='U');
+  const vacBookingsInMonth = state.vacationBookings.filter(b=>b.date_from.slice(0,7)===mk || b.date_to.slice(0,7)===mk);
+
+  const doc = new jsPDFCtor();
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  doc.setFontSize(16);
+  doc.setFont(undefined,'bold');
+  doc.text(`Monatsauswertung ${monthLabel}`, 14, 18);
+  doc.setFont(undefined,'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(110);
+  doc.text(`Zeiterfassung Jan · erstellt am ${new Date().toLocaleDateString('de-DE')}`, 14, 24);
+  doc.setTextColor(0);
+
+  const summaryBody = [
+    ['Soll-Stunden', row ? fmtNum(row.soll_hours,1)+' Std.' : '–'],
+    ['Ist-Stunden', row ? fmtNum(row.ist_hours,1)+' Std.' : '–'],
+    ['Überstunden (Monat)', row ? (row._overtime>=0?'+':'')+fmtNum(row._overtime,1)+' Std.' : '–'],
+    ['Ausbezahlt', row ? fmtNum(row.paid_out_hours,1)+' Std.' : '–'],
+    ['Umwandlung (Resturlaub)', row ? fmtNum(row.vacation_conversion_hours,1)+' Std.' : '–'],
+    ['Verrechnung (Anschaffungen)', row && row._purchaseHours ? fmtNum(row._purchaseHours,1)+' Std.'+(row._purchaseApplied ? '' : ' (bereits in Ist enthalten)') : '–'],
+    ['Überstundensaldo Monatsende', row ? fmtNum(row._balanceEnd,2)+' Std.'+(row.is_projected?' (Planwert)':'') : '–'],
+    ['Urlaubstage laut Tageserfassung', vacEntries.length ? fmtNum(vacEntries.length,0)+' Tag(e)' : '0'],
+  ];
+  doc.autoTable({
+    startY: 30,
+    head: [['Kennzahl','Wert']],
+    body: summaryBody,
+    theme: 'grid',
+    styles: { fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: [79,107,254] },
+    columnStyles: { 0:{cellWidth:90}, 1:{cellWidth:'auto'} },
+  });
+
+  if(entries.length){
+    const dayBody = entries.map(e=>{
+      const d = new Date(e.entry_date+'T00:00:00');
+      const dateLabel = d.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'});
+      const zeiten = e.code ? (CODE_LABELS[e.code]||e.code) : (e.start_time && e.end_time ? e.start_time.slice(0,5)+'–'+e.end_time.slice(0,5) : '–');
+      const pause = e.break_minutes ? e.break_minutes+' min' : '–';
+      return [dateLabel, zeiten, pause, fmtNum(dailySoll(e),2), fmtNum(dailyIst(e),2), e.comment||''];
+    });
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [['Datum','Zeiten / Kürzel','Pause','Soll','Ist','Kommentar']],
+      body: dayBody,
+      theme: 'striped',
+      styles: { fontSize: 8, cellPadding: 2.5 },
+      headStyles: { fillColor: [79,107,254] },
+    });
+  } else {
+    doc.setFontSize(9);
+    doc.setTextColor(110);
+    doc.text('Keine Tageseinträge für diesen Monat erfasst.', 14, doc.lastAutoTable.finalY + 10);
+    doc.setTextColor(0);
+  }
+
+  if(vacBookingsInMonth.length){
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [['Urlaub (Historie)','Zeitraum','Tage']],
+      body: vacBookingsInMonth.map(b=>[b.description||b.booking_type||'–', `${b.date_from} – ${b.date_to}`, fmtNum(b.days,1)]),
+      theme: 'striped',
+      styles: { fontSize: 8, cellPadding: 2.5 },
+      headStyles: { fillColor: [26,157,92] },
+    });
+  }
+
+  if(purchasesInMonth.length){
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [['Verrechnung (Anschaffungen)','Monat(e)','Stunden']],
+      body: purchasesInMonth.map(p=>[p.description, p.reference_month||'–', fmtNum(p.hours,2)]),
+      theme: 'striped',
+      styles: { fontSize: 8, cellPadding: 2.5 },
+      headStyles: { fillColor: [193,125,0] },
+    });
+  }
+
+  doc.setFontSize(8);
+  doc.setTextColor(150);
+  doc.text(`Seite ${doc.internal.getNumberOfPages()}`, pageWidth - 24, doc.internal.pageSize.getHeight() - 8);
+
+  doc.save(`Monatsauswertung_${mk}.pdf`);
 }
 
 // ============================================================================
