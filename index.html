@@ -65,6 +65,10 @@
   .icon-badge.green{background:var(--green-soft);color:var(--green);}
   .icon-badge.purple{background:#f6e9fb;color:#8226a3;}
   .icon-badge.orange{background:#fef3e2;color:var(--amber);}
+  .icon-badge.red{background:var(--red-soft);color:var(--red);}
+  .missing-card{border-color:#f6c9c8;background:linear-gradient(180deg,var(--red-soft) 0%,var(--card) 90px);}
+  .missing-days{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .missing-days button{background:#fff;font-size:13px;}
   .card.quick-entry{background:linear-gradient(135deg,#eef1ff 0%,#ffffff 65%);}
   .qe-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
   .qe-info{flex:1;min-width:150px;}
@@ -167,6 +171,7 @@
   <!-- DASHBOARD -->
   <section class="tab-panel active" id="tab-dashboard">
     <div class="dash-greeting" id="dash-greeting"></div>
+    <div class="card missing-card" id="dashboard-missing" style="display:none;"></div>
     <div class="card quick-entry" id="dashboard-quickentry"></div>
     <div class="grid" id="dashboard-stats"></div>
     <div class="card">
@@ -307,6 +312,7 @@ const ICON_PATHS = {
   cart: '<path d="M3 6h2l2.2 11.2a2 2 0 0 0 2 1.8h7.6a2 2 0 0 0 2-1.6L21 9H6"/><circle cx="9.5" cy="21" r="1"/><circle cx="17.5" cy="21" r="1"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  warn: '<path d="M12 9v4M12 17h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
 };
 function svgIcon(name){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON_PATHS[name]}</svg>`; }
 
@@ -336,9 +342,10 @@ function timeDiffHours(start,end){
 function dailySoll(entry){
   if(entry.soll_override !== null && entry.soll_override !== undefined) return Number(entry.soll_override);
   const wd = isWeekday(entry.entry_date);
-  // Urlaub wird immer mit dem vollen Tages-Soll gutgeschrieben (neutral), auch wenn nichts gearbeitet wurde
-  if(entry.code === 'U') return wd ? 8 : 0;
-  if(['UU','F','K'].includes(entry.code)) return 0;
+  // Urlaub und Feiertag werden immer mit dem vollen Tages-Soll gutgeschrieben (neutral),
+  // auch wenn nichts gearbeitet wurde. An Wochenenden gibt es grundsätzlich kein Soll.
+  if(entry.code === 'U' || entry.code === 'F') return wd ? 8 : 0;
+  if(['UU','K'].includes(entry.code)) return 0;
   if(['SA','SU'].includes(entry.code)) return wd ? Math.max(0, 8 - (Number(entry.absence_hours)||0)) : 0;
   return wd ? 8 : 0;
 }
@@ -347,11 +354,56 @@ function dailyIst(entry){
   if(entry.start_time && entry.end_time){
     worked = Math.max(0, timeDiffHours(entry.start_time.slice(0,5), entry.end_time.slice(0,5)) - (Number(entry.break_minutes)||0)/60);
   }
-  // Urlaubstag: die 8 Std. Gutschrift stehen immer, zusätzlich gearbeitete Zeit zählt obendrauf als Überstunden
-  if(entry.code === 'U') return dailySoll(entry) + worked;
+  // Urlaubs-/Feiertag: die 8 Std. Gutschrift stehen immer, zusätzlich gearbeitete Zeit (z.B. an
+  // einem Feiertag, an dem trotzdem gearbeitet wurde) zählt obendrauf als Überstunden.
+  if(entry.code === 'U' || entry.code === 'F') return dailySoll(entry) + worked;
   return worked;
 }
+// Gaußsche Osterformel (Meeus/Jones/Butcher-Algorithmus) für den gregorianischen Kalender.
+function easterSunday(year){
+  const a = year % 19, b = Math.floor(year/100), c = year % 100;
+  const d = Math.floor(b/4), e = b % 4, f = Math.floor((b+8)/25), g = Math.floor((b-f+1)/3);
+  const h = (19*a+b-d-g+15) % 30, i = Math.floor(c/4), k = c % 4;
+  const l = (32+2*e+2*i-h-k) % 7, m = Math.floor((a+11*h+22*l)/451);
+  const monthNum = Math.floor((h+l-7*m+114)/31);
+  const day = ((h+l-7*m+114) % 31) + 1;
+  return new Date(year, monthNum-1, day);
+}
+function addDays(date, n){ const d = new Date(date); d.setDate(d.getDate()+n); return d; }
+// Gesetzliche Feiertage in Niedersachsen (bundeseinheitliche + landesspezifische: Reformationstag).
+function niedersachsenFeiertage(year){
+  const ostern = easterSunday(year);
+  return [
+    { date: isoDate(new Date(year,0,1)),        name: 'Neujahr' },
+    { date: isoDate(addDays(ostern,-2)),        name: 'Karfreitag' },
+    { date: isoDate(addDays(ostern,1)),         name: 'Ostermontag' },
+    { date: isoDate(new Date(year,4,1)),        name: 'Tag der Arbeit' },
+    { date: isoDate(addDays(ostern,39)),        name: 'Christi Himmelfahrt' },
+    { date: isoDate(addDays(ostern,50)),        name: 'Pfingstmontag' },
+    { date: isoDate(new Date(year,9,3)),        name: 'Tag der Deutschen Einheit' },
+    { date: isoDate(new Date(year,9,31)),       name: 'Reformationstag' },
+    { date: isoDate(new Date(year,11,25)),      name: '1. Weihnachtstag' },
+    { date: isoDate(new Date(year,11,26)),      name: '2. Weihnachtstag' },
+  ];
+}
 function monthKey(dateStr){ return dateStr.slice(0,7); }
+
+// Werktage (Mo-Fr) im laufenden Monat bis gestern, für die noch KEIN Eintrag existiert.
+// Das Wochenende wird bewusst nicht geprüft (da nur bei tatsächlicher Arbeit gebucht wird)
+// und der heutige Tag hat bereits seine eigene Karte ("Heute noch nichts erfasst").
+function missingWeekdaysThisMonth(){
+  const today = new Date();
+  const todayStr = isoDate(today);
+  const missing = [];
+  const cursor = startOfMonth(today);
+  while(true){
+    const dStr = isoDate(cursor);
+    if(dStr >= todayStr) break;
+    if(isWeekday(dStr) && !state.timeEntries.some(e=>e.entry_date===dStr)) missing.push(dStr);
+    cursor.setDate(cursor.getDate()+1);
+  }
+  return missing;
+}
 
 // ============================================================================
 // AUTH
@@ -411,8 +463,32 @@ async function loadAll(){
   state.purchases = pu.data || [];
   state.vacationYears = vy.data || [];
   state.vacationBookings = vb.data || [];
+  await autoSeedHolidays();
   await autoFinalizeMonths();
   computeMonthlyBalances();
+}
+
+// Legt für jeden gesetzlichen Feiertag in Niedersachsen, der auf einen Werktag fällt, automatisch
+// einen Tageseintrag mit Kürzel "F" an (8 Std. Soll+Ist, neutral) — sofern für den Tag noch kein
+// Eintrag existiert (ein bereits vorhandener Eintrag, z.B. weil doch gearbeitet wurde, wird nie
+// überschrieben). Das läuft nur ab VERRECHNUNG_CUTOFF_MONTH (Beginn der täglichen Live-Erfassung),
+// damit in die älteren, nur monatsweise importierten Excel-Monate nicht nachträglich einzelne
+// Tage eingemischt werden.
+async function autoSeedHolidays(){
+  if(!currentUser) return;
+  const cutoff = VERRECHNUNG_CUTOFF_MONTH + '-01';
+  const years = new Set([Number(cutoff.slice(0,4))]);
+  const now = new Date();
+  years.add(now.getFullYear());
+  years.add(now.getFullYear()+1);
+  const holidays = [...years].flatMap(y=>niedersachsenFeiertage(y));
+  const toInsert = holidays.filter(h =>
+    h.date >= cutoff && isWeekday(h.date) && !state.timeEntries.some(e=>e.entry_date===h.date)
+  );
+  if(!toInsert.length) return;
+  const rows = toInsert.map(h => ({ entry_date: h.date, code:'F', comment: h.name, user_id: currentUser.id }));
+  const { data, error } = await sb.from('time_entries').insert(rows).select();
+  if(!error && data) state.timeEntries.push(...data);
 }
 
 // Ein Monat, der als "Planwert" markiert ist und komplett vorbei ist, wird beim Laden
@@ -535,6 +611,27 @@ function renderDashboard(){
   const hour = today.getHours();
   const greeting = hour<11 ? 'Guten Morgen' : hour<18 ? 'Guten Tag' : 'Guten Abend';
   document.getElementById('dash-greeting').innerHTML = `${greeting} <span class="sub">${today.toLocaleDateString('de-DE',{weekday:'long', day:'2-digit', month:'long'})}</span>`;
+
+  // Warnkarte: Werktage ohne Buchung
+  const missingDays = missingWeekdaysThisMonth();
+  const missingEl = document.getElementById('dashboard-missing');
+  if(missingDays.length){
+    missingEl.style.display = '';
+    missingEl.innerHTML = `
+      <div class="qe-row">
+        <div class="icon-badge red">${svgIcon('warn')}</div>
+        <div class="qe-info">
+          <div class="qe-title">${missingDays.length} Werktag${missingDays.length===1?'':'e'} ohne Buchung</div>
+          <div class="qe-sub">${missingDays.map(d=>weekdayShort(d)+' '+fmtDateShort(d).slice(0,6)).join(', ')}</div>
+        </div>
+      </div>
+      <div class="missing-days">
+        ${missingDays.map(d=>`<button onclick="openTimeEntryModal(null,'${d}')">${weekdayShort(d)} ${fmtDateShort(d).slice(0,6)} nachtragen</button>`).join('')}
+      </div>`;
+  } else {
+    missingEl.style.display = 'none';
+    missingEl.innerHTML = '';
+  }
 
   // Quick-Entry Karte
   const todayStr = isoDate(today);
