@@ -203,6 +203,7 @@
 
   <!-- ÜBERSTUNDENKONTO -->
   <section class="tab-panel" id="tab-ueberstunden">
+    <div class="grid" id="mo-year-stats"></div>
     <div class="card">
       <div class="row-flex">
         <h2 style="margin:0;">Monatsübersicht</h2>
@@ -648,6 +649,33 @@ function closeModal(){ document.getElementById('modal-root').innerHTML = ''; }
 document.getElementById('mo-add').addEventListener('click', ()=>openMonthlyModal(null));
 
 function renderUeberstunden(){
+  const yearNow = new Date().getFullYear();
+  const yearRows = state.monthlyOverview.filter(r => new Date(r.month).getFullYear()===yearNow && !r.is_projected);
+  const grossOvertime = yearRows.reduce((s,r)=>s+r._overtime,0);
+  const paidOutYear = yearRows.reduce((s,r)=>s+Number(r.paid_out_hours||0),0);
+  const convertedYear = yearRows.reduce((s,r)=>s+Number(r.vacation_conversion_hours||0),0);
+  const netYear = grossOvertime - paidOutYear - convertedYear;
+  document.getElementById('mo-year-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="icon-badge blue">${svgIcon('bars')}</div>
+      <div class="label">Überstunden ${yearNow} (brutto)</div>
+      <div class="value ${grossOvertime>=0?'pos':'neg'}">${grossOvertime>=0?'+':''}${fmtNum(grossOvertime,1)} Std.</div>
+      <div class="sub">Summe Ist − Soll aus ${yearRows.length} abgeschlossenen Monaten (ohne Planwerte)</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon-badge orange">${svgIcon('clock')}</div>
+      <div class="label">Ausbezahlt/umgewandelt ${yearNow}</div>
+      <div class="value">${fmtNum(paidOutYear+convertedYear,1)} Std.</div>
+      <div class="sub">davon ${fmtNum(paidOutYear,1)} Std. ausbezahlt, ${fmtNum(convertedYear,1)} Std. Umwandlung</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon-badge purple">${svgIcon('check')}</div>
+      <div class="label">Netto-Veränderung ${yearNow}</div>
+      <div class="value ${netYear>=0?'pos':'neg'}">${netYear>=0?'+':''}${fmtNum(netYear,1)} Std.</div>
+      <div class="sub">Wie stark sich dein Saldo dieses Jahr bisher verändert hat</div>
+    </div>
+  `;
+
   const tbody = document.getElementById('mo-table-body');
   tbody.innerHTML = state.monthlyOverview.length ? state.monthlyOverview.map(r=>`
     <tr>
