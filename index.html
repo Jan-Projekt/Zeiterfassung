@@ -481,8 +481,21 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab === 'zeiterfassung'){
+      // Direkt beim Öffnen des Tabs zum heutigen Tag springen, statt manuell runterscrollen zu müssen
+      requestAnimationFrame(()=>requestAnimationFrame(()=>scrollToTodayEntryRow(false)));
+    }
   });
 });
+
+// Springt in der Zeiterfassungs-Tabelle zur heutigen Zeile (nur sinnvoll, wenn der
+// aktuell angezeigte Monat auch der laufende Monat ist).
+function scrollToTodayEntryRow(smooth){
+  const todayStr = isoDate(new Date());
+  if(isoDate(zeMonthCursor).slice(0,7) !== todayStr.slice(0,7)) return;
+  const row = document.querySelector('#ze-table-body tr.today');
+  if(row) row.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
+}
 
 function renderAll(){
   renderDashboard();
@@ -637,6 +650,12 @@ function renderZeiterfassung(){
       </td>
     </tr>`;
   }).join('') : '<tr class="empty-row"><td class="empty" colspan="10">Keine Einträge in diesem Monat</td></tr>';
+
+  // Falls der Zeiterfassungs-Tab gerade sichtbar ist (z.B. nach dem Speichern eines Eintrags),
+  // direkt wieder zur heutigen Zeile scrollen statt die Position zu verlieren.
+  if(document.getElementById('tab-zeiterfassung').classList.contains('active')){
+    requestAnimationFrame(()=>scrollToTodayEntryRow(false));
+  }
 }
 
 function openTimeEntryModal(entry, presetDate){
