@@ -2,76 +2,115 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#4f6bfe">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Zeiterfassung">
 <title>Zeiterfassung</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root{
-    --bg:#f5f6f8; --card:#ffffff; --text:#1c2128; --muted:#6b7280;
-    --border:#e5e7eb; --accent:#2563eb; --accent-dark:#1d4ed8;
-    --green:#16a34a; --red:#dc2626; --amber:#d97706;
-    --radius:12px;
+    --bg:#f4f5f8; --card:#ffffff; --text:#14161a; --muted:#70747e;
+    --border:#e7e8ec; --border-strong:#dadce2;
+    --accent:#4f6bfe; --accent-dark:#3d54e0; --accent-soft:#eef1ff;
+    --green:#1a9d5c; --green-soft:#e7f8ef; --red:#e0403f; --red-soft:#fdecec; --amber:#c17d00;
+    --radius:16px; --radius-sm:10px;
+    --shadow:0 1px 2px rgba(20,22,26,.04), 0 4px 14px rgba(20,22,26,.05);
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
   }
-  *{box-sizing:border-box;}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
-  #auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
-  .auth-card{background:var(--card);border-radius:var(--radius);padding:32px;width:100%;max-width:380px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
-  .auth-card h1{font-size:20px;margin:0 0 4px;}
-  .auth-card p.sub{color:var(--muted);font-size:14px;margin:0 0 24px;}
-  label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px;margin-top:14px;}
-  input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:#fff;color:var(--text);}
-  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent);}
-  button{cursor:pointer;font-size:14px;border-radius:8px;border:1px solid var(--border);background:#fff;padding:9px 14px;color:var(--text);}
-  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{-webkit-text-size-adjust:100%;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:inherit;}
+  #auth-screen{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;padding-top:calc(24px + var(--safe-t));padding-bottom:calc(24px + var(--safe-b));background:linear-gradient(180deg,#eef1ff 0%,var(--bg) 340px);}
+  .auth-card{background:var(--card);border-radius:20px;padding:32px 28px;width:100%;max-width:380px;box-shadow:var(--shadow);border:1px solid var(--border);}
+  .auth-card h1{font-size:22px;margin:0 0 4px;font-weight:700;letter-spacing:-.01em;}
+  .auth-card p.sub{color:var(--muted);font-size:14px;margin:0 0 22px;}
+  label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-bottom:6px;margin-top:16px;}
+  input,select,textarea{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:16px;background:#fff;color:var(--text);font-family:inherit;min-height:44px;transition:border-color .15s;}
+  select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2370747e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:32px;}
+  textarea{min-height:unset;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  button{cursor:pointer;font-size:14px;font-weight:500;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:#fff;padding:10px 16px;color:var(--text);font-family:inherit;min-height:40px;transition:background .12s,border-color .12s,transform .05s;}
+  button:active{transform:scale(.97);}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;box-shadow:0 1px 2px rgba(79,107,254,.3);}
   button.primary:hover{background:var(--accent-dark);}
-  button.danger{color:var(--red);border-color:#fca5a5;}
-  button.ghost{border-color:transparent;background:transparent;color:var(--muted);}
+  button.danger{color:var(--red);border-color:#f6c9c8;}
+  button.ghost{border-color:transparent;background:transparent;color:var(--muted);padding:8px 10px;}
+  button.ghost:hover{background:var(--bg);color:var(--text);}
   button:disabled{opacity:.5;cursor:default;}
-  #auth-error{color:var(--red);font-size:13px;margin-top:10px;min-height:16px;}
-  #app{display:none;max-width:1100px;margin:0 auto;padding:20px 16px 60px;}
-  header.topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;}
-  header.topbar h1{font-size:18px;margin:0;}
-  .chip{background:var(--card);border:1px solid var(--border);border-radius:999px;padding:6px 14px;font-size:13px;display:inline-flex;gap:6px;align-items:center;}
-  .chip b{font-variant-numeric:tabular-nums;}
-  nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap;}
-  nav.tabs button{border:none;background:none;padding:10px 14px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;border-radius:0;}
-  nav.tabs button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+  #auth-error{color:var(--red);font-size:13px;margin-top:12px;min-height:16px;}
+  #app{display:none;max-width:1080px;margin:0 auto;padding:0 16px calc(90px + var(--safe-b));}
+  header.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:calc(14px + var(--safe-t)) 16px 12px;margin:0 -16px 18px;background:rgba(244,245,248,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+  header.topbar h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em;}
+  .chip{background:var(--card);border:1px solid var(--border);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:500;display:inline-flex;gap:6px;align-items:center;box-shadow:var(--shadow);}
+  .chip b{font-variant-numeric:tabular-nums;font-weight:700;}
+  nav.tabs{display:flex;gap:2px;margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#eceef3;padding:4px;border-radius:999px;}
+  nav.tabs::-webkit-scrollbar{display:none;}
+  nav.tabs button{border:none;background:none;padding:9px 16px;font-size:13px;font-weight:600;color:var(--muted);border-radius:999px;white-space:nowrap;display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+  nav.tabs button svg{width:15px;height:15px;flex:none;}
+  nav.tabs button.active{color:var(--text);background:var(--card);box-shadow:var(--shadow);}
   .tab-panel{display:none;}
-  .tab-panel.active{display:block;}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px;}
-  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
-  .stat-card .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
-  .stat-card .value{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;}
-  .stat-card .sub{font-size:12px;color:var(--muted);margin-top:4px;}
+  .tab-panel.active{display:block;animation:fadein .18s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);}
+  .stat-card .label{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em;margin-bottom:8px;}
+  .stat-card .value{font-size:25px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+  .stat-card .sub{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4;}
   .pos{color:var(--green);} .neg{color:var(--red);}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px;}
-  .card h2{font-size:15px;margin:0 0 14px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:var(--shadow);}
+  .card h2{font-size:15px;margin:0 0 14px;font-weight:700;letter-spacing:-.01em;}
   .row-flex{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
-  th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
-  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
-  tr.today{background:#eff6ff;}
-  td input,td select{padding:6px 8px;font-size:13px;}
-  .table-wrap{overflow-x:auto;}
-  .actions-cell{display:flex;gap:4px;white-space:nowrap;}
-  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#fafbfc;}
+  tr.today{background:var(--accent-soft) !important;}
+  td input,td select{padding:7px 8px;font-size:13px;min-height:36px;}
+  .table-wrap{overflow-x:auto;margin:0 -18px;padding:0 18px;}
+  .actions-cell{display:flex;gap:2px;white-space:nowrap;justify-content:flex-end;}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
   .form-grid .full{grid-column:1/-1;}
-  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;}
-  .modal{background:#fff;border-radius:var(--radius);padding:22px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
-  .modal h3{margin:0 0 16px;font-size:16px;}
-  .modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
-  .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
-  .badge.U{background:#dbeafe;color:#1e40af;}
-  .badge.UU{background:#e0e7ff;color:#3730a3;}
-  .badge.K{background:#fee2e2;color:#991b1b;}
-  .badge.F{background:#fef3c7;color:#92400e;}
-  .badge.SA,.badge.SU{background:#f3e8ff;color:#6b21a8;}
-  .empty{color:var(--muted);font-size:13px;padding:20px 0;text-align:center;}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(15,17,22,.45);display:flex;align-items:flex-end;justify-content:center;padding:0;z-index:50;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
+  .modal{background:#fff;border-radius:20px 20px 0 0;padding:22px 22px calc(22px + var(--safe-b));width:100%;max-width:480px;max-height:88vh;overflow-y:auto;animation:slideup .2s ease;}
+  @keyframes slideup{from{transform:translateY(24px);opacity:.6;}to{transform:none;opacity:1;}}
+  @media (min-width:560px){
+    .modal-backdrop{align-items:center;padding:16px;}
+    .modal{border-radius:20px;}
+  }
+  .modal h3{margin:0 0 16px;font-size:17px;font-weight:700;}
+  .modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;flex-wrap:wrap;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:7px;font-size:11px;font-weight:700;}
+  .badge.U{background:var(--accent-soft);color:#3548c9;}
+  .badge.UU{background:#ece9fe;color:#5b3cc4;}
+  .badge.K{background:var(--red-soft);color:#a3282b;}
+  .badge.F{background:#fef3e2;color:var(--amber);}
+  .badge.SA,.badge.SU{background:#f6e9fb;color:#8226a3;}
+  .empty{color:var(--muted);font-size:13px;padding:28px 0;text-align:center;}
   .month-nav{display:flex;align-items:center;gap:10px;}
-  .month-nav b{min-width:140px;text-align:center;}
-  .footnote{font-size:12px;color:var(--muted);margin-top:8px;}
-  @media (max-width:640px){
-    th,td{padding:6px 5px;font-size:12px;}
+  .month-nav b{min-width:130px;text-align:center;font-size:14px;}
+  .month-nav button{padding:8px 12px;}
+  .footnote{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;}
+  @media (max-width:700px){
+    #app{padding-left:12px;padding-right:12px;}
+    header.topbar{margin-left:-12px;margin-right:-12px;padding-left:12px;padding-right:12px;}
+    .table-wrap{margin:0;padding:0;overflow-x:visible;}
+    table, thead, tbody, tr{display:block;width:100%;}
+    thead{display:none;}
+    tbody tr{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;padding:6px 12px;box-shadow:var(--shadow);}
+    tbody tr.empty-row{border:none;box-shadow:none;background:none;}
+    td{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding:9px 0;white-space:normal;text-align:right;}
+    td:last-child{border-bottom:none;}
+    td[data-label]:before{content:attr(data-label);color:var(--muted);font-size:12px;font-weight:600;text-align:left;flex:0 0 auto;}
+    td:not([data-label]):before{content:none;}
+    td.actions-cell{justify-content:flex-end;padding-top:10px;}
+    td.actions-cell:before{content:none;}
+    td.empty{display:block;text-align:center;}
+    .stat-card .value{font-size:22px;}
   }
 </style>
 </head>
@@ -100,11 +139,11 @@
   </header>
 
   <nav class="tabs">
-    <button data-tab="dashboard" class="active">Dashboard</button>
-    <button data-tab="zeiterfassung">Zeiterfassung</button>
-    <button data-tab="ueberstunden">Überstundenkonto</button>
-    <button data-tab="verrechnung">Verrechnung</button>
-    <button data-tab="urlaub">Urlaub</button>
+    <button data-tab="dashboard" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
+    <button data-tab="zeiterfassung"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>Zeiterfassung</button>
+    <button data-tab="ueberstunden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20V10M10 20V4M17 20v-7"/></svg>Überstundenkonto</button>
+    <button data-tab="verrechnung"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h2l2.2 11.2a2 2 0 0 0 2 1.8h7.6a2 2 0 0 0 2-1.6L21 9H6"/><circle cx="9.5" cy="21" r="1"/><circle cx="17.5" cy="21" r="1"/></svg>Verrechnung</button>
+    <button data-tab="urlaub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12M12 12C7 12 4 9 4 4c5 0 8 3 8 8Zm0 0c5 0 8-3 8-8-5 0-8 3-8 8Z"/></svg>Urlaub</button>
   </nav>
 
   <!-- DASHBOARD -->
@@ -234,7 +273,12 @@ let zeMonthCursor = startOfMonth(new Date());
 // HELPERS
 // ============================================================================
 function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-function isoDate(d){ return d.toISOString().slice(0,10); }
+function isoDate(d){
+  // Lokales Datum (nicht UTC!) als YYYY-MM-DD. toISOString() würde in Zeitzonen
+  // östlich von UTC (z.B. Europe/Berlin) am Monatsersten auf den Vortag zurückspringen.
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 function fmtNum(n, digits=2){ if(n===null||n===undefined||isNaN(n)) return '–'; return Number(n).toLocaleString('de-DE',{minimumFractionDigits:digits,maximumFractionDigits:digits}); }
 function fmtHours(n){ return fmtNum(n,2) + ' Std.'; }
 function isWeekday(dateStr){ const d = new Date(dateStr+'T00:00:00'); const day = d.getDay(); return day>=1 && day<=5; }
@@ -407,14 +451,14 @@ function renderDashboard(){
   const tbody = document.getElementById('dashboard-recent');
   tbody.querySelector && (tbody.innerHTML = recent.length ? recent.map(e=>`
     <tr>
-      <td>${fmtDateShort(e.entry_date)} (${weekdayShort(e.entry_date)})</td>
-      <td>${e.start_time?e.start_time.slice(0,5):'–'}</td>
-      <td>${e.end_time?e.end_time.slice(0,5):'–'}</td>
-      <td>${fmtHours(dailyIst(e))}</td>
-      <td>${e.code?`<span class="badge ${e.code}">${CODE_LABELS[e.code]}</span>`:''}</td>
-      <td style="color:var(--muted)">${e.comment||''}</td>
+      <td data-label="Datum">${fmtDateShort(e.entry_date)} (${weekdayShort(e.entry_date)})</td>
+      <td data-label="Beginn">${e.start_time?e.start_time.slice(0,5):'–'}</td>
+      <td data-label="Ende">${e.end_time?e.end_time.slice(0,5):'–'}</td>
+      <td data-label="Ist">${fmtHours(dailyIst(e))}</td>
+      <td data-label="Kürzel">${e.code?`<span class="badge ${e.code}">${CODE_LABELS[e.code]}</span>`:'–'}</td>
+      <td data-label="Kommentar" style="color:var(--muted)">${e.comment||'–'}</td>
     </tr>
-  `).join('') : '<tr><td class="empty" colspan="6">Noch keine Einträge</td></tr>');
+  `).join('') : '<tr class="empty-row"><td class="empty" colspan="6">Noch keine Einträge</td></tr>');
 }
 
 // ============================================================================
@@ -443,21 +487,21 @@ function renderZeiterfassung(){
   tbody.innerHTML = entries.length ? entries.map(e=>{
     const ist = dailyIst(e), soll = dailySoll(e), diff = ist-soll;
     return `<tr class="${e.entry_date===todayStr?'today':''}">
-      <td>${fmtDateShort(e.entry_date)} (${weekdayShort(e.entry_date)})</td>
-      <td>${e.start_time?e.start_time.slice(0,5):'–'}</td>
-      <td>${e.break_minutes?e.break_minutes+' min':'–'}</td>
-      <td>${e.end_time?e.end_time.slice(0,5):'–'}</td>
-      <td>${fmtNum(ist,2)}</td>
-      <td>${fmtNum(soll,2)}</td>
-      <td class="${diff>=0?'pos':'neg'}">${diff>=0?'+':''}${fmtNum(diff,2)}</td>
-      <td>${e.code?`<span class="badge ${e.code}">${e.code}</span>`:''}</td>
-      <td style="white-space:normal;color:var(--muted);max-width:200px;">${e.comment||''}</td>
+      <td data-label="Datum">${fmtDateShort(e.entry_date)} (${weekdayShort(e.entry_date)})</td>
+      <td data-label="Beginn">${e.start_time?e.start_time.slice(0,5):'–'}</td>
+      <td data-label="Pause">${e.break_minutes?e.break_minutes+' min':'–'}</td>
+      <td data-label="Ende">${e.end_time?e.end_time.slice(0,5):'–'}</td>
+      <td data-label="Ist">${fmtNum(ist,2)}</td>
+      <td data-label="Soll">${fmtNum(soll,2)}</td>
+      <td data-label="±" class="${diff>=0?'pos':'neg'}">${diff>=0?'+':''}${fmtNum(diff,2)}</td>
+      <td data-label="Kürzel">${e.code?`<span class="badge ${e.code}">${e.code}</span>`:'–'}</td>
+      <td data-label="Kommentar" style="white-space:normal;color:var(--muted);max-width:200px;">${e.comment||'–'}</td>
       <td class="actions-cell">
         <button class="ghost" onclick="openTimeEntryModal(${JSON.stringify(e).replace(/"/g,'&quot;')})">✎</button>
         <button class="ghost" onclick="deleteTimeEntry('${e.id}')">🗑</button>
       </td>
     </tr>`;
-  }).join('') : '<tr><td class="empty" colspan="10">Keine Einträge in diesem Monat</td></tr>';
+  }).join('') : '<tr class="empty-row"><td class="empty" colspan="10">Keine Einträge in diesem Monat</td></tr>';
 }
 
 function openTimeEntryModal(entry, presetDate){
@@ -533,20 +577,20 @@ function renderUeberstunden(){
   const tbody = document.getElementById('mo-table-body');
   tbody.innerHTML = state.monthlyOverview.length ? state.monthlyOverview.map(r=>`
     <tr>
-      <td>${MONTH_NAMES[new Date(r.month).getMonth()]} ${new Date(r.month).getFullYear()}${r.is_projected?' <span class="badge F">Plan</span>':''}</td>
-      <td>${fmtNum(r.soll_hours,1)}</td>
-      <td>${fmtNum(r.ist_hours,1)}</td>
-      <td class="${r._overtime>=0?'pos':'neg'}">${r._overtime>=0?'+':''}${fmtNum(r._overtime,1)}</td>
-      <td>${fmtNum(r.paid_out_hours,1)}</td>
-      <td>${fmtNum(r.vacation_conversion_hours,1)}</td>
-      <td><b class="${r._balanceEnd>=0?'pos':'neg'}">${fmtNum(r._balanceEnd,2)}</b></td>
-      <td style="white-space:normal;color:var(--muted);max-width:160px;">${r.comment||''}</td>
+      <td data-label="Monat">${MONTH_NAMES[new Date(r.month).getMonth()]} ${new Date(r.month).getFullYear()}${r.is_projected?' <span class="badge F">Plan</span>':''}</td>
+      <td data-label="Soll">${fmtNum(r.soll_hours,1)}</td>
+      <td data-label="Ist">${fmtNum(r.ist_hours,1)}</td>
+      <td data-label="Überstd." class="${r._overtime>=0?'pos':'neg'}">${r._overtime>=0?'+':''}${fmtNum(r._overtime,1)}</td>
+      <td data-label="Ausbezahlt">${fmtNum(r.paid_out_hours,1)}</td>
+      <td data-label="Umwandlung">${fmtNum(r.vacation_conversion_hours,1)}</td>
+      <td data-label="Saldo Ende"><b class="${r._balanceEnd>=0?'pos':'neg'}">${fmtNum(r._balanceEnd,2)}</b></td>
+      <td data-label="Kommentar" style="white-space:normal;color:var(--muted);max-width:160px;">${r.comment||'–'}</td>
       <td class="actions-cell">
         <button class="ghost" onclick='openMonthlyModal(${JSON.stringify(r).replace(/'/g,"&apos;")})'>✎</button>
         <button class="ghost" onclick="deleteMonthly('${r.id}')">🗑</button>
       </td>
     </tr>
-  `).join('') : '<tr><td class="empty" colspan="9">Noch keine Monate erfasst</td></tr>';
+  `).join('') : '<tr class="empty-row"><td class="empty" colspan="9">Noch keine Monate erfasst</td></tr>';
 }
 
 function openMonthlyModal(row){
@@ -626,17 +670,17 @@ function renderVerrechnung(){
   const tbody = document.getElementById('pu-table-body');
   tbody.innerHTML = state.purchases.length ? state.purchases.map(p=>`
     <tr>
-      <td>${p.description}</td>
-      <td>${p.reference_month||'–'}</td>
-      <td>${p.net_value!==null?fmtNum(p.net_value,2)+' €':'–'}</td>
-      <td>${fmtNum(p.hours,2)}</td>
-      <td>${p.entry_type==='stunden_transfer'?'Stundentransfer':(p.entry_type==='sonstiges'?'Sonstiges':'Anschaffung')}</td>
+      <td data-label="Bezeichnung">${p.description}</td>
+      <td data-label="Monat(e)">${p.reference_month||'–'}</td>
+      <td data-label="Wert netto">${p.net_value!==null?fmtNum(p.net_value,2)+' €':'–'}</td>
+      <td data-label="Stunden">${fmtNum(p.hours,2)}</td>
+      <td data-label="Typ">${p.entry_type==='stunden_transfer'?'Stundentransfer':(p.entry_type==='sonstiges'?'Sonstiges':'Anschaffung')}</td>
       <td class="actions-cell">
         <button class="ghost" onclick='openPurchaseModal(${JSON.stringify(p).replace(/'/g,"&apos;")})'>✎</button>
         <button class="ghost" onclick="deletePurchase('${p.id}')">🗑</button>
       </td>
     </tr>
-  `).join('') : '<tr><td class="empty" colspan="6">Noch keine Einträge</td></tr>';
+  `).join('') : '<tr class="empty-row"><td class="empty" colspan="6">Noch keine Einträge</td></tr>';
 }
 
 function openPurchaseModal(p){
@@ -705,32 +749,32 @@ function renderUrlaub(){
     const used = state.vacationBookings.filter(b=>b.booking_type==='Urlaub' && b.date_from.slice(0,4)===String(vy.year)).reduce((s,b)=>s+Number(b.days),0);
     const remaining = Number(vy.entitlement_days) - used;
     return `<tr>
-      <td>${vy.year}</td>
-      <td>${fmtNum(vy.entitlement_days,1)}</td>
-      <td>${fmtNum(used,1)}</td>
-      <td><b>${fmtNum(remaining,1)}</b></td>
+      <td data-label="Jahr">${vy.year}</td>
+      <td data-label="Anspruch (Tage)">${fmtNum(vy.entitlement_days,1)}</td>
+      <td data-label="Genommen">${fmtNum(used,1)}</td>
+      <td data-label="Resturlaub"><b>${fmtNum(remaining,1)}</b></td>
       <td class="actions-cell">
         <button class="ghost" onclick='openVacationYearModal(${JSON.stringify(vy).replace(/'/g,"&apos;")})'>✎</button>
         <button class="ghost" onclick="deleteVacationYear('${vy.id}')">🗑</button>
       </td>
     </tr>`;
-  }).join('') : '<tr><td class="empty" colspan="5">Noch keine Jahre erfasst</td></tr>';
+  }).join('') : '<tr class="empty-row"><td class="empty" colspan="5">Noch keine Jahre erfasst</td></tr>';
 
   const vbBody = document.getElementById('vb-table-body');
   const sortedBookings = [...state.vacationBookings].sort((a,b)=>b.date_from.localeCompare(a.date_from));
   vbBody.innerHTML = sortedBookings.length ? sortedBookings.map(vb=>`
     <tr>
-      <td>${fmtDateShort(vb.date_from)}</td>
-      <td>${fmtDateShort(vb.date_to)}</td>
-      <td>${fmtNum(vb.days,1)}</td>
-      <td>${vb.description||''}</td>
-      <td>${vb.booking_type}</td>
+      <td data-label="Von">${fmtDateShort(vb.date_from)}</td>
+      <td data-label="Bis">${fmtDateShort(vb.date_to)}</td>
+      <td data-label="Tage">${fmtNum(vb.days,1)}</td>
+      <td data-label="Beschreibung">${vb.description||'–'}</td>
+      <td data-label="Typ">${vb.booking_type}</td>
       <td class="actions-cell">
         <button class="ghost" onclick='openVacationBookingModal(${JSON.stringify(vb).replace(/'/g,"&apos;")})'>✎</button>
         <button class="ghost" onclick="deleteVacationBooking('${vb.id}')">🗑</button>
       </td>
     </tr>
-  `).join('') : '<tr><td class="empty" colspan="6">Noch keine Buchungen</td></tr>';
+  `).join('') : '<tr class="empty-row"><td class="empty" colspan="6">Noch keine Buchungen</td></tr>';
 }
 
 function openVacationYearModal(vy){
